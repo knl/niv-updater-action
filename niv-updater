@@ -226,7 +226,7 @@ createPullRequestsOnUpdate() {
             -b "$INPUT_PULL_REQUEST_BASE" \
             -h "$branch_name" >/dev/null; then
             # try to delete the branch
-            hug api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
+            hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
             exit 1
         fi
 
