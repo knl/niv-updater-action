@@ -215,7 +215,7 @@ createPullRequestsOnUpdate() {
             "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >/dev/null; then
             echo "::error::could not upload content to $branch_name"
             # try to delete the branch
-            hug api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
+            hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
             exit 1
         fi
 
