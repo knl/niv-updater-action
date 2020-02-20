@@ -19,7 +19,8 @@ name: Automated niv-managed dependency updates
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '*/15 * * * *'
+    # run this every day at 4:00am
+    - cron:  '0 4 * * *'
 jobs:
   niv-updater:
     name: 'Create PRs for niv-managed dependencies'
