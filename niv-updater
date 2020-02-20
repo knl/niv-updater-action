@@ -225,6 +225,7 @@ createPullRequestsOnUpdate() {
             -f -F "$message" \
             -b "$INPUT_PULL_REQUEST_BASE" \
             -h "$branch_name" >/dev/null; then
+            echo "::error::could not create a PR"
             # try to delete the branch
             hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
             exit 1
