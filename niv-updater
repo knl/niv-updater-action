@@ -34,7 +34,7 @@ installDependencies() {
 
 # Setup netrc file to be used by nix-prefetch-url
 setupNetrc() {
-    if [[ -n "$INPUT_SKIP_SSH_REPOS" ]]; then
+    if [[ -z "$INPUT_SKIP_SSH_REPOS" ]]; then
         netrc=$(mktemp)
         sudo chmod 0600 "$netrc"
         sudo sh -c "echo 'netrc-file = $netrc' >> /etc/nix/nix.conf"
