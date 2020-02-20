@@ -136,7 +136,7 @@ createPullRequestsOnUpdate() {
                 echo "As this is a dependency fetched with SSH, trying to switch to https type"
                 niv_branch="$(jq -r ".\"$dep\".ref // empty" <"$wdir/$SOURCES_JSON")"
                 niv drop "$dep"
-                niv add "$dep_owner/$dep_repo" -a rev="$revision" -a ref="$niv_branch"
+                niv add "$dep_owner/$dep_repo" -a rev="$revision" -a branch="$niv_branch"
                 rm "$SOURCES_JSON.orig"
                 cp "$SOURCES_JSON" "$SOURCES_JSON.orig"
             fi
