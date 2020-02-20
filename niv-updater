@@ -175,11 +175,12 @@ createPullRequestsOnUpdate() {
         )
 
         # generate the message
+        title=$(mktemp)
         message=$(mktemp)
 
         printf "Will generate the Pull Request message for '$dep', update from %.8s to %.8s\n" "$revision" "$new_revision"
 
-        printf "niv %s: update %.8s -> %.8s\n\n" "$dep" "$revision" "$new_revision" >>"$message"
+        printf "niv %s: update %.8s -> %.8s" "$dep" "$revision" "$new_revision" >>"$title"
         # get a short changelog if we're on github
         if [[ -z "$is_github" ]]; then
             # pretty sure this is not github
@@ -219,12 +220,14 @@ createPullRequestsOnUpdate() {
             exit 1
         fi
 
-        # create a PR
+        # create a PR, use API to avoid the need for a local checkout
         echo "Creating a PR for updating '$dep', branch name is '$branch_name'"
-        if ! hub pull-request \
-            -f -F "$message" \
-            -b "$INPUT_PULL_REQUEST_BASE" \
-            -h "$branch_name" >/dev/null; then
+        if ! hub api -XPOST \
+            -F head="$branch_name" \
+            -F base="$INPUT_PULL_REQUEST_BASE" \
+            -F title=@"$title" \
+            -F body=@"$message" \
+            "/repos/$GITHUB_REPOSITORY/pulls" >/dev/null; then
             echo "::error::could not create a PR"
             # try to delete the branch
             hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
@@ -235,6 +238,7 @@ createPullRequestsOnUpdate() {
         rm -rf "$wdir"
         rm -f "$new_content"
         rm -f "$message"
+        rm -f "$title"
 
         echo "Processing dependency '$dep' - done"
     done
