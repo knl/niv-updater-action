@@ -162,6 +162,18 @@ createPullRequestsOnUpdate() {
             continue
         fi
 
+        # since in the previous step we possibly changed from ssh to https, revert back
+        (
+            cd "$wdir"
+
+            # rewrite the entry so that we can use token instead of SSH
+            if [[ -n "$github_ssh" ]]; then
+                echo "Reverting the dependency back to SSH"
+                echo "$content" >"$wdir/$SOURCES_JSON"
+                niv modify "$dep" -a rev="$new_revision"
+            fi
+        )
+
         # generate the message
         message=$(mktemp)
 
