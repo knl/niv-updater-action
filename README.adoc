@@ -54,6 +54,8 @@ jobs:
 * `skip_ssh_repos`: (Optional) If non-empty, will cause the action to skip
   updating any dependency that is hosted by a repo accessible via ssh. Defaults
   to not skip.
+* `skip_dependencies`: (Optional) The list of dependencies, comma separated, to
+  skip from updating. Defaults to empty.
 
 == Secrets
 

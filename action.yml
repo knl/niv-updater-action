@@ -17,6 +17,10 @@ inputs:
     description: 'If non-empty, will cause the action to skip updating any dependency that is hosted by a repo accessible via ssh.'
     required: false
     default: ''
+  skip_dependencies:
+    description: 'The list of dependencies, comma separated, to skip from updating.'
+    required: false
+    default: ''
 branding:
   # maybe 'refresh-cw'
   icon: 'git-pull-request'

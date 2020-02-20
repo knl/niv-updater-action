@@ -78,6 +78,11 @@ createPullRequestsOnUpdate() {
     for dep in $(echo "$content" | jq -r 'keys[]'); do
         echo "Processing dependency '$dep'"
 
+        if [[ ",$INPUT_SKIP_DEPENDENCIES," == *",$dep,"* ]]; then
+            echo "Dependency '$dep' is in skip_dependencies list, skipping."
+            continue
+        fi
+
         revision=$(echo "$content" | jq -r ".\"$dep\".rev")
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
