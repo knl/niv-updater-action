@@ -1,0 +1,63 @@
+= niv-updater: Automated dependency updates with niv 
+
+This action will open a pull request to master branch (or otherwise specified
+branch) whenever https://github.com/nmattia/niv[niv] detects updates to
+`nix/sources.json` in your repository, for each dependency separately.
+
+The idea is that you can set up a scheduled workflow with this action, and you
+would get new PRs whenever there are updates, so that you don't have to do that
+manually.
+
+== Example
+
+Here is an example of what to put in your
+`+.github/workflows/niv-updates.yml+` file to trigger the action.
+
+[source,yaml]
+----
+name: Automated niv-managed dependency updates
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '*/15 * * * *'
+jobs:
+  niv-updater:
+    name: 'Create PRs for niv-managed dependencies'
+    runs-on: ubuntu-latest
+    steps:
+      - name: niv-updater-action
+        uses: knl/niv-updater-action@master
+        with:
+          pull_request_branch: 'master'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+----
+
+== Configuration
+
+=== Inputs
+
+`niv-updater-action` is configured using the following inputs:
+
+* `pull_request_base`: (Optional) The name of the branch to issue the pull request
+  against. In addition, the name of the branch from which `nix/sources.json` is
+  taken from as the base. Defaults to an empty string which means taking as the
+  base the default branch for the repository.
+* `skip_versioned_revisions`: (Optional) If non-empty, will cause the action to
+  skip updating any dependency that has a version in their revision. This is due
+  to the way niv currently works, where it will always update to the latest HEAD
+  of a branch. Thus, if one have a dependency where, for example, `rev=v1.0.0`,
+  niv would normally update it to the latest head of the branch, making `rev`
+  holding the appropriate SHA. This is something one would not normally expect.
+  Thus, this option exists until niv fixes the behaviour. Defaults to skip.
+* `skip_ssh_repos`: (Optional) If non-empty, will cause the action to skip
+  updating any dependency that is hosted by a repo accessible via ssh. Defaults
+  to not skip.
+
+== Secrets
+
+Secrets are similar to inputs except that they are encrypted and only used by GitHub Actions. It's a convenient way to keep sensitive data out of the GitHub Actions workflow YAML file.
+
+* `GITHUB_TOKEN` - (Required) The GitHub API token used to create pull requests
+  and get content from all repositories tracked by `niv`.
+

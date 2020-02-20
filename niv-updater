@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# vim: set ft=bash
+
+set -euo pipefail
+
+checkCredentials() {
+    if [[ -z "${GITHUB_TOKEN}" ]]; then
+        echo "You must include the GITHUB_TOKEN as an environment variable."
+        exit 1
+    fi
+}
+
+installNix() {
+    echo "Installing Nix"
+    sudo mkdir -p /etc/nix
+
+    # Workaround segfault: https://github.com/NixOS/nix/issues/2733
+    sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
+
+    sh <(curl https://nixos.org/nix/install) --no-daemon
+
+    export PATH="${PATH}:/nix/var/nix/profiles/per-user/runner/profile/bin:/nix/var/nix/profiles/default/bin"
+
+    source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
+    echo "Installing Nix - done"
+}
+
+# Install all the dependencies we need
+installDependencies() {
+    echo "Installing dependencies"
+    nix-env -iA nixpkgs.jq nixpkgs.git nixpkgs.gitAndTools.hub nixpkgs.niv
+    echo "Installing dependencies - done"
+}
+
+# Setup netrc file to be used by nix-prefetch-url
+setupNetrc() {
+    if [[ -n "$INPUT_SKIP_SSH_REPOS" ]]; then
+        netrc=$(mktemp)
+        sudo chmod 0600 "$netrc"
+        sudo sh -c "echo 'netrc-file = $netrc' >> /etc/nix/nix.conf"
+        cat <<EOF >>"$netrc"
+machine github.com
+login api
+password $GITHUB_TOKEN
+EOF
+        trap "rm -f '$netrc'" EXIT
+    fi
+}
+
+createPullRequestsOnUpdate() {
+    echo "Checking for updates"
+    if [ -z "${INPUT_PULL_REQUEST_BASE:-}" ]; then
+        INPUT_PULL_REQUEST_BASE="$GITHUB_REF"
+        base="$GITHUB_SHA"
+    else
+        # get the SHA of the current base, so that it remains fixed during the run
+        base="$(hub api -t "/repos/$GITHUB_REPOSITORY/branches/$INPUT_PULL_REQUEST_BASE" | grep '^.commit.sha' | cut -f2)"
+    fi
+
+    echo "Will use branch '$INPUT_PULL_REQUEST_BASE' (ref: $base) as the base branch"
+
+    SOURCES_JSON='nix/sources.json'
+
+    echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base)"
+    # get the content
+    sj=$(mktemp)
+    if ! hub api -t -XGET -F ref="$base" "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >>"$sj"; then
+        echo "::error::could not fetch sources.json"
+        exit 1
+    fi
+    echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base) - done"
+
+    file_sha="$(grep '^.sha' <"$sj" | cut -f2)"
+    encoded="$(grep '^.content' <"$sj" | cut -f2)"
+    content="$(printf "$encoded" | base64 -d)"
+
+    echo "Going through all dependencies"
+    for dep in $(echo "$content" | jq -r 'keys[]'); do
+        echo "Processing dependency '$dep'"
+
+        revision=$(echo "$content" | jq -r ".\"$dep\".rev")
+
+        # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
+        if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && -n "$INPUT_SKIP_VERSIONED_REVISIONS" ]]; then
+            echo "Revision '$revision' looks like a regular version string, and skip_versioned_revisions is set, skipping."
+            continue
+        fi
+
+        # check if the branch exists first, and skip if it does
+        branch_name="upgrade/$dep-$revision"
+
+        if hub api "/repos/$GITHUB_REPOSITORY/branches/$branch_name" >/dev/null; then
+            echo "branch '$branch_name' already exists, skipping."
+            continue
+        fi
+
+        echo "Will use branch '$branch_name' for the possible update"
+
+        # since this is an action, we don't have SSH keys available
+        # but we do have tokens that are useful
+        # check if the dependency is to github
+        dep_owner="$(echo "$content" | jq -r ".\"$dep\".owner // empty")"
+        dep_repo="$(echo "$content" | jq -r ".\"$dep\".repo // empty")"
+        dep_url="$(echo "$content" | jq -r ".\"$dep\".url // empty" | { grep github.com || true; })"
+        github_ssh="$(echo "$content" | jq -r ".\"$dep\".repo // empty" | { grep -F 'ssh://git@github.com' || true; })"
+        [[ -n "$dep_url" || -n "$github_ssh" ]] && is_github="yes" || is_github=""
+
+        # skip if github_ssh and skip_ssh_repos is in effect
+        if [[ -n "$github_ssh" && -n "$INPUT_SKIP_SSH_REPOS" ]]; then
+            echo "Hosted by a repository accessible over SSH, and skip_ssh_repos is set, skipping."
+            continue
+        fi
+
+        # try extracting the owner and the repo
+        if [[ -n "$github_ssh" ]]; then
+            owner_repo="${github_ssh#ssh://git@github.com/}"
+            dep_owner="${owner_repo%/*}"
+            dep_repo="${owner_repo#*/}"
+        fi
+
+        # check if there is an update by running niv
+        wdir=$(mktemp -d)
+        mkdir -p "$wdir/nix"
+        echo "$content" >"$wdir/$SOURCES_JSON.orig"
+        echo "$content" >"$wdir/$SOURCES_JSON"
+        (
+            cd "$wdir"
+
+            # rewrite the entry so that we can use token instead of SSH
+            if [[ -n "$github_ssh" ]]; then
+                echo "As this is a dependency fetched with SSH, trying to switch to https type"
+                niv_branch="$(jq -r ".\"$dep\".ref // empty" <"$wdir/$SOURCES_JSON")"
+                niv drop "$dep"
+                niv add "$dep_owner/$dep_repo" -a rev="$revision" -a ref="$niv_branch"
+                rm "$SOURCES_JSON.orig"
+                cp "$SOURCES_JSON" "$SOURCES_JSON.orig"
+            fi
+
+            # TODO: make sure niv can update from tag to tag, instead of always using shas
+            if ! niv update "$dep"; then
+                echo "::warning:: Cannot update '$dep', skipping it"
+                touch .skip
+            fi
+        )
+        # the only way to continue when using subshells
+        [[ -e "$wdir/.skip" ]] && continue
+
+        if diff -q "$wdir/$SOURCES_JSON.orig" "$wdir/$SOURCES_JSON" &>/dev/null; then
+            echo "There is no update for '$dep', skipping."
+            continue
+        fi
+
+        new_revision="$(jq -r ".\"$dep\".rev" <"$wdir/$SOURCES_JSON")"
+
+        if [[ "$revision" == "$new_revision" ]]; then
+            echo "The new version ($new_revision) is the same as old ($revision) for $dep, skipping"
+            continue
+        fi
+
+        # generate the message
+        message=$(mktemp)
+
+        printf "Will generate the Pull Request message for '$dep', update from %.8s to %.8s\n" "$revision" "$new_revision"
+
+        printf "niv %s: update %.8s -> %.8s\n\n" "$dep" "$revision" "$new_revision" >>"$message"
+        # get a short changelog if we're on github
+        if [[ -z "$is_github" ]]; then
+            # pretty sure this is not github
+            echo "Dependency '$dep' isn't hosted on github.com, cannot fetch the changelog" >>"$message"
+        else
+            echo "Dependency '$dep' is hosted on github.com"
+
+            echo "## Changelog for $dep:" >>"$message"
+            echo "" >>"$message"
+            printf "Commits: [$dep_owner/$dep_repo@%.8s...%.8s](https://github.com/$dep_owner/$dep_repo/compare/${revision}...${new_revision})\n\n" "$revision" "$new_revision" >>"$message"
+            { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] | "* [\(.sha[0:8])](\(.html_url)) \(.commit.message | split("\n") | first)"' >>"$message"
+        fi
+
+        # create the branch
+        echo "Creating branch '$branch_name' for the update of '$dep'"
+        if ! hub api \
+            -F ref="refs/heads/$branch_name" \
+            -F sha="$base" \
+            "/repos/$GITHUB_REPOSITORY/git/refs" >/dev/null; then
+            echo "::error::could not create branch $branch_name"
+            exit 1
+        fi
+
+        # upload the content
+        echo "Uploading the new $SOURCES_JSON"
+        new_content=$(mktemp)
+        base64 "$wdir/$SOURCES_JSON" >>"$new_content"
+        if ! hub api -XPUT \
+            -F message=@"$message" \
+            -F content=@"$new_content" \
+            -F sha="$file_sha" \
+            -F branch="$branch_name" \
+            "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >/dev/null; then
+            echo "::error::could not upload content to $branch_name"
+            # try to delete the branch
+            hug api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
+            exit 1
+        fi
+
+        # create a PR
+        echo "Creating a PR for updating '$dep', branch name is '$branch_name'"
+        if ! hub pull-request \
+            -f -F "$message" \
+            -b "$INPUT_PULL_REQUEST_BASE" \
+            -h "$branch_name" >/dev/null; then
+            # try to delete the branch
+            hug api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
+            exit 1
+        fi
+
+        # cleanup
+        rm -rf "$wdir"
+        rm -f "$new_content"
+        rm -f "$message"
+
+        echo "Processing dependency '$dep' - done"
+    done
+    echo "Checking for updates - done"
+}
+
+checkCredentials
+installNix
+installDependencies
+setupNetrc
+createPullRequestsOnUpdate
