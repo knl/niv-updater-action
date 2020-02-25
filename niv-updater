@@ -21,6 +21,7 @@ installNix() {
 
     export PATH="${PATH}:/nix/var/nix/profiles/per-user/runner/profile/bin:/nix/var/nix/profiles/default/bin"
 
+    # shellcheck disable=SC1090
     source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
     echo "Installing Nix - done"
 }
@@ -46,6 +47,7 @@ machine github.com
 login api
 password $GITHUB_TOKEN
 EOF
+        # shellcheck disable=SC2064
         trap "rm -f '$netrc'" EXIT
     fi
 }
@@ -190,10 +192,11 @@ createPullRequestsOnUpdate() {
         else
             echo "Dependency '$dep' is hosted on github.com"
 
-            echo "## Changelog for $dep:" >>"$message"
-            echo "" >>"$message"
-            printf "Commits: [$dep_owner/$dep_repo@%.8s...%.8s](https://github.com/$dep_owner/$dep_repo/compare/${revision}...${new_revision})\n\n" "$revision" "$new_revision" >>"$message"
-            { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] | "* [\(.sha[0:8])](\(.html_url)) \(.commit.message | split("\n") | first)"' >>"$message"
+            {
+                printf "## Changelog for %s:\n" "$dep"
+                printf "Commits: [$dep_owner/$dep_repo@%.8s...%.8s](https://github.com/$dep_owner/$dep_repo/compare/${revision}...${new_revision})\n\n" "$revision" "$new_revision"
+                { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] | "* [\(.sha[0:8])](\(.html_url)) \(.commit.message | split("\n") | first)"'
+            } >>"$message"
         fi
 
         # create the branch

@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'README.adoc'
+      - 'LICENSE'
+      - '.gitignore'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - 'README.adoc'
+      - 'LICENSE'
+      - '.gitignore'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          # Get Nix
+          sudo mkdir -p /etc/nix
+          # Workaround segfault: https://github.com/NixOS/nix/issues/2733
+          sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
+          sh <(curl -sSL https://nixos.org/nix/install) --no-daemon
+
+          echo "::add-path::/nix/var/nix/profiles/per-user/runner/profile/bin"
+          echo "::add-path::/nix/var/nix/profiles/default/bin"
+
+          source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
+          # Install dependencies
+          nix-env -iA nixpkgs.shfmt nixpkgs.shellcheck
+      - name: Run shfmt
+        run: |
+          shfmt -d -i 4 -ci -bn -s niv-updater
+      - name: Run shellcheck
+        run: |
+          shellcheck -s bash niv-updater
