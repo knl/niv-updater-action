@@ -77,7 +77,7 @@ createPullRequestsOnUpdate() {
     content="$(jq -r '.content' <"$sj" | base64 -d)"
 
     echo "Going through all dependencies"
-    for dep in $(echo "$content" | jq -r 'keys[]'); do
+    for dep in $(jq -r 'keys[]' <<<"$content"); do
         echo "Processing dependency '$dep'"
 
         if [[ ",$INPUT_SKIP_DEPENDENCIES," == *",$dep,"* ]]; then
@@ -85,7 +85,7 @@ createPullRequestsOnUpdate() {
             continue
         fi
 
-        revision=$(echo "$content" | jq -r ".\"$dep\".rev")
+        revision=$(jq -r ".\"$dep\".rev" <<<"$content")
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
         if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && -n $INPUT_SKIP_VERSIONED_REVISIONS ]]; then
@@ -106,10 +106,10 @@ createPullRequestsOnUpdate() {
         # since this is an action, we don't have SSH keys available
         # but we do have tokens that are useful
         # check if the dependency is to github
-        dep_owner="$(echo "$content" | jq -r ".\"$dep\".owner // empty")"
-        dep_repo="$(echo "$content" | jq -r ".\"$dep\".repo // empty")"
-        dep_url="$(echo "$content" | jq -r ".\"$dep\".url // empty" | { grep github.com || true; })"
-        github_ssh="$(echo "$content" | jq -r ".\"$dep\".repo // empty" | { grep -F 'ssh://git@github.com' || true; })"
+        dep_owner="$(jq -r ".\"$dep\".owner // empty" <<<"$content")"
+        dep_repo="$(jq -r ".\"$dep\".repo // empty" <<<"$content")"
+        dep_url="$(jq -r ".\"$dep\".url // empty" <<<"$content" | { grep github.com || true; })"
+        github_ssh="$(jq -r ".\"$dep\".repo // empty" <<<"$content" | { grep -F 'ssh://git@github.com' || true; })"
         [[ -n $dep_url || -n $github_ssh ]] && is_github="yes" || is_github=""
 
         # skip if github_ssh and skip_ssh_repos is in effect
