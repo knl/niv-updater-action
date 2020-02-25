@@ -67,15 +67,14 @@ createPullRequestsOnUpdate() {
     echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base)"
     # get the content
     sj=$(mktemp)
-    if ! hub api -t -XGET -F ref="$base" "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >>"$sj"; then
+    if ! hub api -XGET -F ref="$base" "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >>"$sj"; then
         echo "::error::could not fetch sources.json"
         exit 1
     fi
     echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base) - done"
 
-    file_sha="$(grep '^.sha' <"$sj" | cut -f2)"
-    encoded="$(grep '^.content' <"$sj" | cut -f2)"
-    content="$(printf "$encoded" | base64 -d)"
+    file_sha="$(jq -r '.sha' <"$sj")"
+    content="$(jq -r '.content' <"$sj" | base64 -d)"
 
     echo "Going through all dependencies"
     for dep in $(echo "$content" | jq -r 'keys[]'); do
