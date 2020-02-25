@@ -4,7 +4,7 @@
 set -euo pipefail
 
 checkCredentials() {
-    if [[ -z "${GITHUB_TOKEN}" ]]; then
+    if [[ -z $GITHUB_TOKEN ]]; then
         echo "You must include the GITHUB_TOKEN as an environment variable."
         exit 1
     fi
@@ -37,7 +37,7 @@ installDependencies() {
 
 # Setup netrc file to be used by nix-prefetch-url
 setupNetrc() {
-    if [[ -z "$INPUT_SKIP_SSH_REPOS" ]]; then
+    if [[ -z $INPUT_SKIP_SSH_REPOS ]]; then
         netrc=$(mktemp)
         sudo chmod 0600 "$netrc"
         sudo sh -c "echo 'netrc-file = $netrc' >> /etc/nix/nix.conf"
@@ -89,7 +89,7 @@ createPullRequestsOnUpdate() {
         revision=$(echo "$content" | jq -r ".\"$dep\".rev")
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
-        if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && -n "$INPUT_SKIP_VERSIONED_REVISIONS" ]]; then
+        if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && -n $INPUT_SKIP_VERSIONED_REVISIONS ]]; then
             echo "Revision '$revision' looks like a regular version string, and skip_versioned_revisions is set, skipping."
             continue
         fi
@@ -111,16 +111,16 @@ createPullRequestsOnUpdate() {
         dep_repo="$(echo "$content" | jq -r ".\"$dep\".repo // empty")"
         dep_url="$(echo "$content" | jq -r ".\"$dep\".url // empty" | { grep github.com || true; })"
         github_ssh="$(echo "$content" | jq -r ".\"$dep\".repo // empty" | { grep -F 'ssh://git@github.com' || true; })"
-        [[ -n "$dep_url" || -n "$github_ssh" ]] && is_github="yes" || is_github=""
+        [[ -n $dep_url || -n $github_ssh ]] && is_github="yes" || is_github=""
 
         # skip if github_ssh and skip_ssh_repos is in effect
-        if [[ -n "$github_ssh" && -n "$INPUT_SKIP_SSH_REPOS" ]]; then
+        if [[ -n $github_ssh && -n $INPUT_SKIP_SSH_REPOS ]]; then
             echo "Hosted by a repository accessible over SSH, and skip_ssh_repos is set, skipping."
             continue
         fi
 
         # try extracting the owner and the repo
-        if [[ -n "$github_ssh" ]]; then
+        if [[ -n $github_ssh ]]; then
             owner_repo="${github_ssh#ssh://git@github.com/}"
             dep_owner="${owner_repo%/*}"
             dep_repo="${owner_repo#*/}"
@@ -135,7 +135,7 @@ createPullRequestsOnUpdate() {
             cd "$wdir"
 
             # rewrite the entry so that we can use token instead of SSH
-            if [[ -n "$github_ssh" ]]; then
+            if [[ -n $github_ssh ]]; then
                 echo "As this is a dependency fetched with SSH, trying to switch to https type"
                 niv_branch="$(jq -r ".\"$dep\".ref // empty" <"$wdir/$SOURCES_JSON")"
                 niv drop "$dep"
@@ -160,7 +160,7 @@ createPullRequestsOnUpdate() {
 
         new_revision="$(jq -r ".\"$dep\".rev" <"$wdir/$SOURCES_JSON")"
 
-        if [[ "$revision" == "$new_revision" ]]; then
+        if [[ $revision == "$new_revision" ]]; then
             echo "The new version ($new_revision) is the same as old ($revision) for $dep, skipping"
             continue
         fi
@@ -170,7 +170,7 @@ createPullRequestsOnUpdate() {
             cd "$wdir"
 
             # rewrite the entry so that we can use token instead of SSH
-            if [[ -n "$github_ssh" ]]; then
+            if [[ -n $github_ssh ]]; then
                 echo "Reverting the dependency back to SSH"
                 echo "$content" >"$wdir/$SOURCES_JSON"
                 niv modify "$dep" -a rev="$new_revision"
@@ -185,7 +185,7 @@ createPullRequestsOnUpdate() {
 
         printf "niv %s: update %.8s -> %.8s" "$dep" "$revision" "$new_revision" >>"$title"
         # get a short changelog if we're on github
-        if [[ -z "$is_github" ]]; then
+        if [[ -z $is_github ]]; then
             # pretty sure this is not github
             echo "Dependency '$dep' isn't hosted on github.com, cannot fetch the changelog" >>"$message"
         else
