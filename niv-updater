@@ -104,7 +104,7 @@ createPullRequestsOnUpdate() {
         revision="$(jq -r ".\"$dep\".rev" <<<"$content")"
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
-        if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && $INPUT_SKIP_VERSIONED_REVISIONS == "true" ]]; then
+        if [[ $INPUT_SKIP_VERSIONED_REVISIONS == "true" && ! ($revision =~ ^[a-f0-9A-F]{40}$ || $revision =~ ^[a-f0-9A-F]{7}) ]]; then
             echo "Revision '$revision' looks like a regular version string, and skip_versioned_revisions is set, skipping."
             continue
         fi
