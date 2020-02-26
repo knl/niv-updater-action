@@ -38,9 +38,9 @@ jobs:
           # Use the default branch for the repository
           pull_request_base: ''
           # If there are revisions in form 'v1.2' (not SHAs), skip updating them
-          skip_versioned_revisions: yes
+          skip_versioned_revisions: true
           # Do not skip dependencies in repos accessed via ssh from updating
-          skip_ssh_repos: ''
+          skip_ssh_repos: false
           # Update all dependencies tracked by niv. Another example: 'common,jq,hub'
           whitelist: ''
           # Do not blacklist any of the dependencies. Another example: 'nixpkgs,niv'
@@ -57,16 +57,17 @@ jobs:
   against. In addition, the name of the branch from which `nix/sources.json` is
   taken from as the base. Defaults to an empty string which means taking as the
   base the default branch for the repository.
-* `skip_versioned_revisions`: (Optional) If non-empty, will cause the action to
-  skip updating any dependency that has a version in their revision. This is due
-  to the way niv currently works, where it will always update to the latest HEAD
-  of a branch. Thus, if one have a dependency where, for example, `rev=v1.0.0`,
-  niv would normally update it to the latest head of the branch, making `rev`
-  holding the appropriate SHA. This is something one would not normally expect.
-  Thus, this option exists until niv fixes the behaviour. Defaults to skip.
-* `skip_ssh_repos`: (Optional) If non-empty, will cause the action to skip
-  updating any dependency that is hosted by a repo accessible via ssh. Defaults
-  to not skip.
+* `skip_versioned_revisions`: (Optional, a boolean) If `true`, will cause the
+  action to skip updating any dependency that has a version in their revision.
+  This is due to the way niv currently works, where it will always update to the
+  latest HEAD of a branch. Thus, if one have a dependency where, for example,
+  `rev=v1.0.0`, niv would normally update it to the latest head of the branch,
+  making `rev` holding the appropriate SHA. This is something one would not
+  normally expect. Thus, this option exists until niv fixes the behaviour.
+  Defaults to `true`.
+* `skip_ssh_repos`: (Optional, a boolean) If `true`, will cause the action to
+  skip updating any dependency that is hosted by a repo accessible via ssh.
+  Defaults to `false`.
 * `whitelist`: (Optional) A list of dependencies, comma separated, that will be
   checked for updates. This list will be checked *before* the blacklist.
   Defaults to an empty string, which is a _special case_ for looking into all

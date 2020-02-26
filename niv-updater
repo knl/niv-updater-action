@@ -40,7 +40,7 @@ installDependencies() {
 
 # Setup netrc file to be used by nix-prefetch-url
 setupNetrc() {
-    if [[ -z $INPUT_SKIP_SSH_REPOS ]]; then
+    if [[ $INPUT_SKIP_SSH_REPOS == "false" ]]; then
         netrc=$(mktemp)
         sudo chmod 0600 "$netrc"
         sudo sh -c "echo 'netrc-file = $netrc' >> /etc/nix/nix.conf"
@@ -110,7 +110,7 @@ createPullRequestsOnUpdate() {
         revision="$(jq -r ".\"$dep\".rev" <<<"$content")"
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
-        if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && -n $INPUT_SKIP_VERSIONED_REVISIONS ]]; then
+        if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && $INPUT_SKIP_VERSIONED_REVISIONS == "true" ]]; then
             echo "Revision '$revision' looks like a regular version string, and skip_versioned_revisions is set, skipping."
             continue
         fi
@@ -135,7 +135,7 @@ createPullRequestsOnUpdate() {
         [[ -n $dep_url || -n $github_ssh ]] && is_github="yes" || is_github=""
 
         # skip if github_ssh and skip_ssh_repos is in effect
-        if [[ -n $github_ssh && -n $INPUT_SKIP_SSH_REPOS ]]; then
+        if [[ -n $github_ssh && $INPUT_SKIP_SSH_REPOS == "true" ]]; then
             echo "Hosted by a repository accessible over SSH, and skip_ssh_repos is set, skipping."
             continue
         fi
