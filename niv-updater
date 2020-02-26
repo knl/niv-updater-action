@@ -3,6 +3,11 @@
 
 set -euo pipefail
 
+error() { echo "::error::$*"; }
+fatal() {
+    error "$@"
+    exit 1
+}
 
 # Install all the dependencies we need, using Nix
 setupPrerequisites() {
@@ -68,8 +73,7 @@ createPullRequestsOnUpdate() {
     # get the content
     sj=$(mktemp)
     if ! hub api -XGET -F ref="$base" "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >>"$sj"; then
-        echo "::error::could not fetch sources.json"
-        exit 1
+        error "could not fetch sources.json"
     fi
     echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base) - done"
 
@@ -224,8 +228,7 @@ createPullRequestsOnUpdate() {
             -F ref="refs/heads/$branch_name" \
             -F sha="$base" \
             "/repos/$GITHUB_REPOSITORY/git/refs" >/dev/null; then
-            echo "::error::could not create branch $branch_name"
-            exit 1
+            error "could not create branch $branch_name"
         fi
 
         # upload the content
@@ -238,10 +241,9 @@ createPullRequestsOnUpdate() {
             -F sha="$file_sha" \
             -F branch="$branch_name" \
             "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >/dev/null; then
-            echo "::error::could not upload content to $branch_name"
             # try to delete the branch
             hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
-            exit 1
+            error "could not upload content to $branch_name"
         fi
 
         # create a PR, use API to avoid the need for a local checkout
@@ -252,10 +254,9 @@ createPullRequestsOnUpdate() {
             -F title=@"$title" \
             -F body=@"$message" \
             "/repos/$GITHUB_REPOSITORY/pulls" >/dev/null; then
-            echo "::error::could not create a PR"
             # try to delete the branch
             hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
-            exit 1
+            error "could not create a PR"
         fi
 
         # cleanup
