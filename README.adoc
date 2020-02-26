@@ -33,6 +33,18 @@ jobs:
         uses: knl/niv-updater-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # NOTE: All inputs are optional. This list them with their default values.
+          # Use the default branch for the repository
+          pull_request_base: ''
+          # If there are revisions in form 'v1.2' (not SHAs), skip updating them
+          skip_versioned_revisions: yes
+          # Do not skip dependencies in repos accessed via ssh from updating
+          skip_ssh_repos: ''
+          # Update all dependencies tracked by niv. Another example: 'common,jq,hub'
+          whitelist: ''
+          # Do not blacklist any of the dependencies. Another example: 'nixpkgs,niv'
+          blacklist: ''
 ----
 
 == Configuration
