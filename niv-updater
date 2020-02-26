@@ -3,12 +3,6 @@
 
 set -euo pipefail
 
-checkCredentials() {
-    if [[ -z $GITHUB_TOKEN ]]; then
-        echo "You must include the GITHUB_TOKEN as an environment variable."
-        exit 1
-    fi
-}
 
 installNix() {
     echo "Installing Nix"
@@ -270,7 +264,6 @@ createPullRequestsOnUpdate() {
     echo "Checking for updates - done"
 }
 
-checkCredentials
 installNix
 installDependencies
 setupNetrc
