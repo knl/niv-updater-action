@@ -166,7 +166,10 @@ createPullRequestsOnUpdate() {
             fi
         )
         # the only way to continue when using subshells
-        [[ -e "$wdir/.skip" ]] && continue
+        if [[ -e "$wdir/.skip" ]]; then
+            rm -rf "$wdir"
+            continue
+        fi
 
         if diff -q "$wdir/$SOURCES_JSON.orig" "$wdir/$SOURCES_JSON" &>/dev/null; then
             echo "There is no update for '$dep', skipping."
@@ -261,6 +264,7 @@ createPullRequestsOnUpdate() {
 
         echo "Processing dependency '$dep' - done"
     done
+    rm -f "$sj"
     echo "Checking for updates - done"
 }
 
