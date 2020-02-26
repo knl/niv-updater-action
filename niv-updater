@@ -93,7 +93,7 @@ createPullRequestsOnUpdate() {
         INPUT_WHITELIST="${INPUT_WHITELIST//^+(,)/}"
         INPUT_WHITELIST="${INPUT_WHITELIST//+(,)$/}"
         shopt -u extglob
-        IFS=, read -ra all_deps <<<"$INPUT_WHITELIST"
+        mapfile -td , all_deps <<<"$INPUT_WHITELIST"
     else
         mapfile -t all_deps < <(jq -r 'keys[]' <<<"$content")
     fi
