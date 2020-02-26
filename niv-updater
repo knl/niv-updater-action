@@ -80,16 +80,34 @@ createPullRequestsOnUpdate() {
     file_sha="$(jq -r '.sha' <"$sj")"
     content="$(jq -r '.content' <"$sj" | base64 -d)"
 
+    # prepare the blacklist
+    # only need to remove spaces, commas are irrelevant
+    INPUT_BLACKLIST="${INPUT_BLACKLIST// /}"
+
+    if [[ -n $INPUT_WHITELIST ]]; then
+        # remove all whitespace
+        INPUT_WHITELIST="${INPUT_WHITELIST// /}"
+        # remove all redundant commas, as well as those at the beginning and end
+        shopt -s extglob
+        INPUT_WHITELIST="${INPUT_WHITELIST//+(,)/,}"
+        INPUT_WHITELIST="${INPUT_WHITELIST//^+(,)/}"
+        INPUT_WHITELIST="${INPUT_WHITELIST//+(,)$/}"
+        shopt -u extglob
+        IFS=, read -ra all_deps <<<"$INPUT_WHITELIST"
+    else
+        mapfile -t all_deps < <(jq -r 'keys[]' <<<"$content")
+    fi
+
     echo "Going through all dependencies"
-    for dep in $(jq -r 'keys[]' <<<"$content"); do
+    for dep in "${all_deps[@]}"; do
         echo "Processing dependency '$dep'"
 
-        if [[ ",$INPUT_SKIP_DEPENDENCIES," == *",$dep,"* ]]; then
-            echo "Dependency '$dep' is in skip_dependencies list, skipping."
+        if [[ ",$INPUT_BLACKLIST," == *",$dep,"* ]]; then
+            echo "Dependency '$dep' is blacklisted, skipping."
             continue
         fi
 
-        revision=$(jq -r ".\"$dep\".rev" <<<"$content")
+        revision="$(jq -r ".\"$dep\".rev" <<<"$content")"
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
         if [[ ! $revision =~ ^[a-f0-9A-F]{40}$ && -n $INPUT_SKIP_VERSIONED_REVISIONS ]]; then

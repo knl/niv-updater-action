@@ -17,8 +17,12 @@ inputs:
     description: 'If non-empty, will cause the action to skip updating any dependency that is hosted by a repo accessible via ssh.'
     required: false
     default: ''
-  skip_dependencies:
-    description: 'The list of dependencies, comma separated, to skip from updating.'
+  whitelist:
+    description: 'A list of dependencies, comma separated, that will be checked for updates. Other dependencies tracked by niv will not be checked for updates. This list will be consulted before the blacklist. It defaults to the list of all dependencies tracked by niv.'
+    required: false
+    default: ''
+  blacklist:
+    description: 'A list of dependencies, comma separated, to skip from updating. This list will be consulted after evaluating the whitelist.'
     required: false
     default: ''
 branding:

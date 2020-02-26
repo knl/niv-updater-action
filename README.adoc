@@ -55,8 +55,13 @@ jobs:
 * `skip_ssh_repos`: (Optional) If non-empty, will cause the action to skip
   updating any dependency that is hosted by a repo accessible via ssh. Defaults
   to not skip.
-* `skip_dependencies`: (Optional) The list of dependencies, comma separated, to
-  skip from updating. Defaults to empty.
+* `whitelist`: (Optional) A list of dependencies, comma separated, that will be
+  checked for updates. This list will be checked *before* the blacklist.
+  Defaults to an empty string, which is a _special case_ for looking into all
+  dependencies tracked by `niv`.
+* `blacklist`: (Optional) A list of dependencies, comma separated, to skip from
+  updating. This list will be checked *after* the whitelist. Defaults to an
+  empty string, which means all dependencies will be checked for updates.
 
 == Secrets
 
