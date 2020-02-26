@@ -93,7 +93,8 @@ createPullRequestsOnUpdate() {
         INPUT_WHITELIST="${INPUT_WHITELIST//^+(,)/}"
         INPUT_WHITELIST="${INPUT_WHITELIST//+(,)$/}"
         shopt -u extglob
-        mapfile -td , all_deps <<<"$INPUT_WHITELIST"
+        # Can't do <<< as it *appends* a newline :(
+        mapfile -td , all_deps < <(printf "%s" "$INPUT_WHITELIST")
     else
         mapfile -t all_deps < <(jq -r 'keys[]' <<<"$content")
     fi
