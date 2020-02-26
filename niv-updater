@@ -4,25 +4,27 @@
 set -euo pipefail
 
 
-installNix() {
+# Install all the dependencies we need, using Nix
+setupPrerequisites() {
     echo "Installing Nix"
-    sudo mkdir -p /etc/nix
 
-    # Workaround segfault: https://github.com/NixOS/nix/issues/2733
-    sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
+    # Check if some other step already installed Nix
+    if [[ ! -d /nix/store ]] || ! nix --version >/dev/null 2>&1; then
+        sudo mkdir -p /etc/nix
+        # Workaround segfault: https://github.com/NixOS/nix/issues/2733
+        sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
 
-    sh <(curl -sSL https://nixos.org/nix/install) --no-daemon
+        sh <(curl -sSL https://nixos.org/nix/install) --no-daemon
+    fi
+
+    echo "Installing Nix - done"
+    echo "Installing dependencies"
 
     export PATH="${PATH}:/nix/var/nix/profiles/per-user/runner/profile/bin:/nix/var/nix/profiles/default/bin"
 
     # shellcheck disable=SC1090
     source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
-    echo "Installing Nix - done"
-}
 
-# Install all the dependencies we need
-installDependencies() {
-    echo "Installing dependencies"
     # we also need jq and git, but they both come with ubuntu-latest with GitHub Actions
     # https://github.com/actions/virtual-environments/blob/master/images/linux/Ubuntu1804-README.md
     nix-env -iA nixpkgs.gitAndTools.hub
@@ -268,7 +270,6 @@ createPullRequestsOnUpdate() {
     echo "Checking for updates - done"
 }
 
-installNix
-installDependencies
+setupPrerequisites
 setupNetrc
 createPullRequestsOnUpdate
