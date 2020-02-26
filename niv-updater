@@ -17,7 +17,7 @@ installNix() {
     # Workaround segfault: https://github.com/NixOS/nix/issues/2733
     sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
 
-    sh <(curl https://nixos.org/nix/install) --no-daemon
+    sh <(curl -sSL https://nixos.org/nix/install) --no-daemon
 
     export PATH="${PATH}:/nix/var/nix/profiles/per-user/runner/profile/bin:/nix/var/nix/profiles/default/bin"
 
