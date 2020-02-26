@@ -1,6 +1,7 @@
 = niv-updater: Automated dependency updates with niv 
 
 image:https://github.com/knl/niv-updater-action/workflows/CI/badge.svg[CI]
+image:https://img.shields.io/github/v/release/knl/niv-updater-action[GitHub release (latest by date)]
 
 This action will open a pull request to master branch (or otherwise specified
 branch) whenever https://github.com/nmattia/niv[niv] detects updates to
@@ -30,7 +31,7 @@ jobs:
     steps:
       # notice there is no checkout step
       - name: niv-updater-action
-        uses: knl/niv-updater-action@v2
+        uses: knl/niv-updater-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
