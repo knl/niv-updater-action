@@ -57,12 +57,12 @@ EOF
 
 createPullRequestsOnUpdate() {
     echo "Checking for updates"
-    if [ -z "${INPUT_PULL_REQUEST_BASE:-}" ]; then
+    if [[ -z $INPUT_PULL_REQUEST_BASE ]]; then
         INPUT_PULL_REQUEST_BASE="$GITHUB_REF"
         base="$GITHUB_SHA"
     else
         # get the SHA of the current base, so that it remains fixed during the run
-        base="$(hub api -t "/repos/$GITHUB_REPOSITORY/branches/$INPUT_PULL_REQUEST_BASE" | grep '^.commit.sha' | cut -f2)"
+        base="$(hub api "/repos/$GITHUB_REPOSITORY/branches/$INPUT_PULL_REQUEST_BASE" | jq -r '.commit.sha')"
     fi
 
     echo "Will use branch '$INPUT_PULL_REQUEST_BASE' (ref: $base) as the base branch"
