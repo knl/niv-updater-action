@@ -55,6 +55,22 @@ EOF
     fi
 }
 
+# This function will modify all INPUT_* variables so that they don't contain any garbage
+sanitizeInputs() {
+    # remove all whitespace
+    INPUT_WHITELIST="${INPUT_WHITELIST// /}"
+    # remove all redundant commas, as well as those at the beginning and end
+    shopt -s extglob
+    INPUT_WHITELIST="${INPUT_WHITELIST//+(,)/,}"
+    INPUT_WHITELIST="${INPUT_WHITELIST//^+(,)/}"
+    INPUT_WHITELIST="${INPUT_WHITELIST//+(,)$/}"
+    shopt -u extglob
+
+    # prepare the blacklist
+    # only need to remove spaces, commas are irrelevant
+    INPUT_BLACKLIST="${INPUT_BLACKLIST// /}"
+}
+
 createPullRequestsOnUpdate() {
     echo "Checking for updates"
     if [[ -z $INPUT_PULL_REQUEST_BASE ]]; then
@@ -80,19 +96,7 @@ createPullRequestsOnUpdate() {
     file_sha="$(jq -r '.sha' <"$sj")"
     content="$(jq -r '.content' <"$sj" | base64 -d)"
 
-    # prepare the blacklist
-    # only need to remove spaces, commas are irrelevant
-    INPUT_BLACKLIST="${INPUT_BLACKLIST// /}"
-
     if [[ -n $INPUT_WHITELIST ]]; then
-        # remove all whitespace
-        INPUT_WHITELIST="${INPUT_WHITELIST// /}"
-        # remove all redundant commas, as well as those at the beginning and end
-        shopt -s extglob
-        INPUT_WHITELIST="${INPUT_WHITELIST//+(,)/,}"
-        INPUT_WHITELIST="${INPUT_WHITELIST//^+(,)/}"
-        INPUT_WHITELIST="${INPUT_WHITELIST//+(,)$/}"
-        shopt -u extglob
         # Can't do <<< as it *appends* a newline :(
         mapfile -td , all_deps < <(printf "%s" "$INPUT_WHITELIST")
     else
@@ -274,4 +278,5 @@ createPullRequestsOnUpdate() {
 
 setupPrerequisites
 setupNetrc
+sanitizeInputs
 createPullRequestsOnUpdate
