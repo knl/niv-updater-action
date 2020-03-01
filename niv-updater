@@ -32,7 +32,7 @@ setupPrerequisites() {
 
     # we also need jq and git, but they both come with ubuntu-latest with GitHub Actions
     # https://github.com/actions/virtual-environments/blob/master/images/linux/Ubuntu1804-README.md
-    nix-env -iA nixpkgs.gitAndTools.hub
+    nix-env -iA nixpkgs.gitAndTools.hub nixpkgs.jo
     nix-env -iA niv -f https://github.com/nmattia/niv/tarball/master \
         --substituters https://niv.cachix.org \
         --trusted-public-keys niv.cachix.org-1:X32PCg2e/zAm3/uD1ScqW2z/K0LtDyNV7RdaxIuLgQM=
@@ -69,6 +69,41 @@ sanitizeInputs() {
     # prepare the blacklist
     # only need to remove spaces, commas are irrelevant
     INPUT_BLACKLIST="${INPUT_BLACKLIST// /}"
+
+    # remove all empty lines from the labels
+    # do not remove whitespace at the beginning and the end of the line, it might be legal
+    shopt -s extglob
+    INPUT_LABELS="${INPUT_LABELS##+(*([[:space:]])$'\n')}"
+    INPUT_LABELS="${INPUT_LABELS%%+(*([[:space:]])$'\n')}"
+    INPUT_LABELS="${INPUT_LABELS//+(*([[:space:]])$'\n')*([[:space:]])$'\n'/$'\n'}"
+    shopt -s extglob
+}
+
+applyLabels() {
+    if [[ -z $INPUT_LABELS ]]; then
+        echo "No labels to add"
+        return
+    fi
+
+    echo "Adding labels to the PR"
+
+    local pr_data
+    pr_data="$1"
+
+    pr_number="$(jq -r ".number // empty" <"$pr_data")"
+    if [[ -z $pr_number ]]; then
+        echo "::warning::could not get the PR number from the json payload, skipping adding labels"
+        return
+    fi
+
+    local labels
+    mapfile -t labels < <(printf "%s" "$INPUT_LABELS")
+    payload=$(jo labels="$(jo -a "${labels[@]}")")
+
+    if ! printf "%s" "$payload" | hub api -XPOST --input - \
+        "/repos/$GITHUB_REPOSITORY/issues/$pr_number/labels" >/dev/null; then
+        echo "::warning::could not assign labels to the PR $pr_number"
+    fi
 }
 
 createPullRequestsOnUpdate() {
@@ -253,19 +288,23 @@ createPullRequestsOnUpdate() {
 
         # create a PR, use API to avoid the need for a local checkout
         echo "Creating a PR for updating '$dep', branch name is '$branch_name'"
+        pr_data=$(mktemp)
         if ! hub api -XPOST \
             -F head="$branch_name" \
             -F base="$INPUT_PULL_REQUEST_BASE" \
             -F title=@"$title" \
             -F body=@"$message" \
-            "/repos/$GITHUB_REPOSITORY/pulls" >/dev/null; then
+            "/repos/$GITHUB_REPOSITORY/pulls" >>"$pr_data"; then
             # try to delete the branch
             hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
             error "could not create a PR"
         fi
 
+        applyLabels "$pr_data"
+
         # cleanup
         rm -rf "$wdir"
+        rm -f "$pr_data"
         rm -f "$new_content"
         rm -f "$message"
         rm -f "$title"
