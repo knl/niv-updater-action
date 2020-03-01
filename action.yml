@@ -25,6 +25,10 @@ inputs:
     description: 'A list of dependencies, comma separated, to skip from updating. This list will be consulted after evaluating the whitelist.'
     required: false
     default: ''
+  labels:
+    description: 'A list of labels, *newline* separated, that will be applied to the generated PR. Defaults to an empty list.'
+    required: false
+    default: ''
 branding:
   # maybe 'refresh-cw'
   icon: 'git-pull-request'

@@ -46,6 +46,10 @@ jobs:
           whitelist: ''
           # Do not blacklist any of the dependencies. Another example: 'nixpkgs,niv'
           blacklist: ''
+          # Note that | is really important for the labels
+          labels: |
+            documentation
+            good first issue
 ----
 
 == Configuration
@@ -76,6 +80,10 @@ jobs:
 * `blacklist`: (Optional) A list of dependencies, comma separated, to skip from
   updating. This list will be checked *after* the whitelist. Defaults to an
   empty string, which means all dependencies will be checked for updates.
+* `labels`: (Optional) A list of labels, **newline** separated, to apply to all
+  created PRs. Defaults to an empty string, meaning no labels will be applied.
+  The list has to be newline separated (use YAML's `|` block), as GitHub allows
+  various characters in the label's name, except the newline.
 
 == Secrets
 
