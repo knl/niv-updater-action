@@ -37,6 +37,14 @@ inputs:
     description: 'If `true`, the changelog will contain merge commits listed. Otherwise, they will be skipped (however, the commits from the PRs/branches will shown). Defaults to `false`.'
     required: false
     default: false
+  message_prefix:
+    description: 'The text that will be put in front of the generated changelog. Defaults to empty.'
+    required: false
+    default: ''
+  message_suffix:
+    description: 'The text that will be put in after the generated changelog. Defaults to empty.'
+    required: false
+    default: ''
 
 branding:
   # maybe 'refresh-cw'
