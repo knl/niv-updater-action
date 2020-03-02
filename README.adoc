@@ -50,6 +50,8 @@ jobs:
           labels: |
             documentation
             good first issue
+          # Let's not show merges in the changelog
+          show_merges: false
 ----
 
 == Configuration
@@ -84,6 +86,9 @@ jobs:
   created PRs. Defaults to an empty string, meaning no labels will be applied.
   The list has to be newline separated (use YAML's `|` block), as GitHub allows
   various characters in the label's name, except the newline.
+* `show_merges`: (Optional, a boolean) If `true`, the changelog will contain
+  merge commits listed. Otherwise, they will be skipped (however, the commits
+  from the PRs/branches will shown). Defaults to `false`.
 
 == Secrets
 
