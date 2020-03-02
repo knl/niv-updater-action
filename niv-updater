@@ -264,7 +264,7 @@ createPullRequestsOnUpdate() {
             {
                 printf "## Changelog for %s:\n" "$dep"
                 printf "Commits: [$dep_owner/$dep_repo@%.8s...%.8s](https://github.com/$dep_owner/$dep_repo/compare/${revision}...${new_revision})\n\n" "$revision" "$new_revision"
-                { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] '"$merges_filter"' | "* [\(.sha[0:8])](\(.html_url)) \(.commit.message | split("\n") | first)"' | sed "s~\(#[0-9]\+\)~$dep_owner/$dep_repo\1~g"
+                { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' | sed "s~\(#[0-9]\+\)~$dep_owner/$dep_repo\1~g"
             } >>"$message"
         fi
 
