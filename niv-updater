@@ -3,9 +3,8 @@
 
 set -euo pipefail
 
-error() { echo "::error::$*"; }
-fatal() {
-    error "$@"
+error() {
+    echo "::error::$*"
     exit 1
 }
 
