@@ -10,11 +10,11 @@ inputs:
     required: false
     default: 'master'
   skip_versioned_revisions:
-    description: 'If non-empty, will cause the action to skip updating any dependency that has a version in their revision. This is due to the way niv currently works, where it will always update to the latest HEAD of a branch. Thus, if one have a dependency where, for example, `rev=v1.0.0`, niv would normally update it to the latest head of the branch, making `rev` holding the appropriate SHA. This is something one would not normally expect. Thus, this option exists until niv fixes the behaviour.'
+    description: 'If `true`, will cause the action to skip updating any dependency that has a version in their revision. This is due to the way niv currently works, where it will always update to the latest HEAD of a branch. Thus, if one have a dependency where, for example, `rev=v1.0.0`, niv would normally update it to the latest head of the branch, making `rev` holding the appropriate SHA. This is something one would not normally expect. Thus, this option exists until niv fixes the behaviour. Defaults to `true`.'
     required: false
     default: true
   skip_ssh_repos:
-    description: 'If non-empty, will cause the action to skip updating any dependency that is hosted by a repo accessible via ssh.'
+    description: 'If `true`, will cause the action to skip updating any dependency that is hosted by a repo accessible via ssh. Defaults to `false`.'
     required: false
     default: false
   whitelist:
