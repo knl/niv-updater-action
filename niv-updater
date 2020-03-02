@@ -118,6 +118,12 @@ createPullRequestsOnUpdate() {
 
     echo "Will use branch '$INPUT_PULL_REQUEST_BASE' (ref: $base) as the base branch"
 
+    merges_filter=""
+    if [[ $INPUT_SHOW_MERGES == "false" ]]; then
+        # a filter for jq, to be used in the query for getting the changelog
+        merges_filter="| select((.parents | length) < 2)"
+    fi
+
     SOURCES_JSON='nix/sources.json'
 
     echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base)"
@@ -258,7 +264,7 @@ createPullRequestsOnUpdate() {
             {
                 printf "## Changelog for %s:\n" "$dep"
                 printf "Commits: [$dep_owner/$dep_repo@%.8s...%.8s](https://github.com/$dep_owner/$dep_repo/compare/${revision}...${new_revision})\n\n" "$revision" "$new_revision"
-                { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] | "* [\(.sha[0:8])](\(.html_url)) \(.commit.message | split("\n") | first)"' | sed "s~\(#[0-9]\+\)~$dep_owner/$dep_repo\1~g"
+                { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] '"$merges_filter"' | "* [\(.sha[0:8])](\(.html_url)) \(.commit.message | split("\n") | first)"' | sed "s~\(#[0-9]\+\)~$dep_owner/$dep_repo\1~g"
             } >>"$message"
         fi
 

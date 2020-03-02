@@ -29,6 +29,11 @@ inputs:
     description: 'A list of labels, *newline* separated, that will be applied to the generated PR. Defaults to an empty list.'
     required: false
     default: ''
+  show_merges:
+    description: 'If `true`, the changelog will contain merge commits listed. Otherwise, they will be skipped (however, the commits from the PRs/branches will shown). Defaults to `false`.'
+    required: false
+    default: false
+
 branding:
   # maybe 'refresh-cw'
   icon: 'git-pull-request'
