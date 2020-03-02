@@ -162,7 +162,7 @@ createPullRequestsOnUpdate() {
         fi
 
         # check if the branch exists first, and skip if it does
-        branch_name="upgrade/$dep-$revision"
+        branch_name="$INPUT_BRANCH_PREFIX$dep-$revision"
 
         if hub api "/repos/$GITHUB_REPOSITORY/branches/$branch_name" >/dev/null; then
             echo "branch '$branch_name' already exists, skipping."

@@ -38,6 +38,8 @@ jobs:
           # NOTE: All inputs are optional. This list them with their default values.
           # Use the default branch for the repository
           pull_request_base: ''
+          # The prefix to add to every created branch
+          branch_prefix: 'update/'
           # If there are revisions in form 'v1.2' (not SHAs), skip updating them
           skip_versioned_revisions: true
           # Do not skip dependencies in repos accessed via ssh from updating
@@ -64,6 +66,11 @@ jobs:
   against. In addition, the name of the branch from which `nix/sources.json` is
   taken from as the base. Defaults to an empty string which means taking as the
   base the default branch for the repository.
+* `branch_prefix`: (Optional) The prefix used for update branches, created by
+  this action. The action does not sanitize the branch name. For a description
+  of what a valid branch name is, please consult:
+  https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html.
+  Defaults to "update/".
 * `skip_versioned_revisions`: (Optional, a boolean) If `true`, will cause the
   action to skip updating any dependency that has a version in their revision.
   This is due to the way niv currently works, where it will always update to the

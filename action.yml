@@ -9,6 +9,10 @@ inputs:
     description: 'The name of the branch to issue the pull requests against. Defaults to an empty string, which means to take the default branch for the repository.'
     required: false
     default: 'master'
+  branch_prefix:
+    description: 'The prefix used for update branches, created by this action. The action does not sanitize the branch name. For a description of what a valid branch name is, please consult: https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html. Defaults to "update/".'
+    required: false
+    default: 'update/'
   skip_versioned_revisions:
     description: 'If `true`, will cause the action to skip updating any dependency that has a version in their revision. This is due to the way niv currently works, where it will always update to the latest HEAD of a branch. Thus, if one have a dependency where, for example, `rev=v1.0.0`, niv would normally update it to the latest head of the branch, making `rev` holding the appropriate SHA. This is something one would not normally expect. Thus, this option exists until niv fixes the behaviour. Defaults to `true`.'
     required: false
