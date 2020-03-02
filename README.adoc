@@ -54,6 +54,13 @@ jobs:
             good first issue
           # Let's not show merges in the changelog
           show_merges: false
+          # Have some prefix and a suffix. Use '|' to keep newlines
+          message_prefix: |
+            ## Motivation
+
+            Dependencies should be up to date.
+          message_suffix:
+            Notify @myorg/myteam.
 ----
 
 == Configuration
@@ -96,6 +103,10 @@ jobs:
 * `show_merges`: (Optional, a boolean) If `true`, the changelog will contain
   merge commits listed. Otherwise, they will be skipped (however, the commits
   from the PRs/branches will shown). Defaults to `false`.
+* `message_prefix`: (Optional) The text that will be put in front of the
+  generated changelog. Defaults to empty.
+* `message_suffix`: (Optional) The text that will be put in after the generated
+  changelog. Defaults to empty.
 
 == Secrets
 

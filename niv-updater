@@ -253,6 +253,10 @@ createPullRequestsOnUpdate() {
         printf "Will generate the Pull Request message for '$dep', update from %.8s to %.8s\n" "$revision" "$new_revision"
 
         printf "niv %s: update %.8s -> %.8s" "$dep" "$revision" "$new_revision" >>"$title"
+
+        # print with a new line appended, as yaml swallows those
+        printf "%s%s" "$INPUT_MESSAGE_PREFIX" "${INPUT_MESSAGE_PREFIX:+$'\n'}" >>"$message"
+
         # get a short changelog if we're on github
         if [[ -z $is_github ]]; then
             # pretty sure this is not github
@@ -266,6 +270,9 @@ createPullRequestsOnUpdate() {
                 { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' | sed "s~\(#[0-9]\+\)~$dep_owner/$dep_repo\1~g"
             } >>"$message"
         fi
+
+        # print with a new line appended, as yaml swallows those
+        printf "%s%s" "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}" >>"$message"
 
         # create the branch
         echo "Creating branch '$branch_name' for the update of '$dep'"
