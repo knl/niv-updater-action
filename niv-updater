@@ -293,9 +293,15 @@ createPullRequestsOnUpdate() {
         # upload the content
         echo "Uploading the new $SOURCES_JSON"
         new_content=$(mktemp)
+        commit_message=$(mktemp)
+        {
+            cat "$title"
+            printf "\n"
+            cat "$message"
+        } >"$commit_message"
         base64 "$wdir/$SOURCES_JSON" >>"$new_content"
         if ! hub api -XPUT \
-            -F message=@"$message" \
+            -F message=@"$commit_message" \
             -F content=@"$new_content" \
             -F sha="$file_sha" \
             -F branch="$branch_name" \
@@ -325,6 +331,7 @@ createPullRequestsOnUpdate() {
         rm -rf "$wdir"
         rm -f "$pr_data"
         rm -f "$new_content"
+        rm -f "$commit_message"
         rm -f "$message"
         rm -f "$title"
 
