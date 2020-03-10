@@ -8,6 +8,13 @@ error() {
     exit 1
 }
 
+# Check if GITHUB_TOKEN is correct (maybe due to misconfiguration, we might get an expired one)
+checkCredentials() {
+    if ! curl --fail -s -H "Authorization: token $GITHUB_TOKEN" 'https://api.github.com/'; then
+        error "GITHUB_TOKEN is incorrect, aborting"
+    fi
+}
+
 # Install all the dependencies we need, using Nix
 setupPrerequisites() {
     echo "Installing Nix"
@@ -327,6 +334,7 @@ createPullRequestsOnUpdate() {
     echo "Checking for updates - done"
 }
 
+checkCredentials
 setupPrerequisites
 setupNetrc
 sanitizeInputs
