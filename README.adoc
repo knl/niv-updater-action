@@ -61,6 +61,8 @@ jobs:
             Dependencies should be up to date.
           message_suffix:
             Notify @myorg/myteam.
+          # Have a prefix to the commit title itself, for example, to support conventional commits.
+          title_prefix: refactor:
 ----
 
 == Configuration
@@ -107,6 +109,8 @@ jobs:
   generated changelog. Defaults to empty.
 * `message_suffix`: (Optional) The text that will be put in after the generated
   changelog. Defaults to empty.
+* `title_prefix`: (Optional) The text that will be put in front of the
+  generated commit title. Defaults to empty.
 
 == Secrets
 
@@ -114,4 +118,3 @@ Secrets are similar to inputs except that they are encrypted and only used by Gi
 
 * `GITHUB_TOKEN` - (Required) The GitHub API token used to create pull requests
   and get content from all repositories tracked by `niv`.
-
