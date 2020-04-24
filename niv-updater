@@ -132,13 +132,13 @@ createPullRequestsOnUpdate() {
 
     SOURCES_JSON='nix/sources.json'
 
-    echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base)"
+    echo "Getting $INPUT_SOURCES_FILE from $GITHUB_REPOSITORY (ref: $base)"
     # get the content
     sj=$(mktemp)
-    if ! hub api -XGET -F ref="$base" "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >>"$sj"; then
+    if ! hub api -XGET -F ref="$base" "/repos/$GITHUB_REPOSITORY/contents/$INPUT_SOURCES_FILE" >>"$sj"; then
         error "could not fetch sources.json"
     fi
-    echo "Getting $SOURCES_JSON from $GITHUB_REPOSITORY (ref: $base) - done"
+    echo "Getting $INPUT_SOURCES_FILE from $GITHUB_REPOSITORY (ref: $base) - done"
 
     file_sha="$(jq -r '.sha' <"$sj")"
     content="$(jq -r '.content' <"$sj" | base64 -d)"
@@ -293,7 +293,7 @@ createPullRequestsOnUpdate() {
         fi
 
         # upload the content
-        echo "Uploading the new $SOURCES_JSON"
+        echo "Uploading the new $INPUT_SOURCES_FILE"
         new_content=$(mktemp)
         commit_message=$(mktemp)
         {
@@ -307,7 +307,7 @@ createPullRequestsOnUpdate() {
             -F content=@"$new_content" \
             -F sha="$file_sha" \
             -F branch="$branch_name" \
-            "/repos/$GITHUB_REPOSITORY/contents/$SOURCES_JSON" >/dev/null; then
+            "/repos/$GITHUB_REPOSITORY/contents/$INPUT_SOURCES_FILE" >/dev/null; then
             # try to delete the branch
             hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
             error "could not upload content to $branch_name"
