@@ -38,6 +38,8 @@ jobs:
           # NOTE: All inputs are optional. This list them with their default values.
           # Use the default branch for the repository
           pull_request_base: ''
+          # The path in the repo to the sources.json file
+          sources_file: 'nix/sources.json'
           # The prefix to add to every created branch
           branch_prefix: 'update/'
           # If there are revisions in form 'v1.2' (not SHAs), skip updating them
@@ -75,6 +77,9 @@ jobs:
   against. In addition, the name of the branch from which `nix/sources.json` is
   taken from as the base. Defaults to an empty string which means taking as the
   base the default branch for the repository.
+* `sources_file`: (Optional) The path in the repo to the `sources.json` file.
+  This value will be passed to niv via `--sources-file` option. Defaults to
+  `nix/sources.json`.
 * `branch_prefix`: (Optional) The prefix used for update branches, created by
   this action. The action does not sanitize the branch name. For a description
   of what a valid branch name is, please consult:
