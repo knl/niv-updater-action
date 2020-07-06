@@ -53,6 +53,10 @@ inputs:
     description: 'The text that will be put in front of the generated commit title. Defaults to empty.'
     required: false
     default: ''
+  github_changelog_no_backreferences:
+    description: 'If `true`, the changelog will transform all issue links to links via a redirector, to prevent GitHub from backreferencing the created PR in these issues. Defaults to `true`.'
+    required: false
+    default: true
 
 branding:
   # maybe 'refresh-cw'
