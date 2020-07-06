@@ -107,6 +107,40 @@ applyLabels() {
     fi
 }
 
+# This function will turn any #123 into owner/repo#123.
+# This is needed, since the changelogs from different repositories will all have issue links as #123,
+# which, when printed as a PR description will create a link to the _current_ repository (one with
+# nix/sources.json), not one where the changelog originated from. The owner/repo#123 format will
+# ensure proper linking.
+formatIssueLinksPlain() {
+    dep_owner="$1"
+    dep_repo="$2"
+    sed "s~\(#[0-9]\+\)~$dep_owner/$dep_repo\1~g"
+}
+
+# Like formatIssuesLinkPlain, this function turns any #123 a direct reference to the original repository.
+# Unlike formatIssuesLink, it will use a redirection service (DuckDuckGo), so that referenced PRs/Issues
+# do not contain back references.
+# For more details, see https://github.com/knl/niv-updater-action/issues/26
+# NOTE: It has to be http://r.duckduckgo.com, https variant will not redirect
+formatIssueLinksNoBackreferences() {
+    dep_owner="$1"
+    dep_repo="$2"
+    # The sequence e2 81 a0 is \u2060 - UNICODE WORD JOINER
+    # We need it in order prevent GitHub from making a backreference due to
+    # the commit message text.
+    sed "s~#\([0-9]\+\)~[$dep_owner/$dep_repo\xe2\x81\xa0#\1](http://r.duckduckgo.com/l/?uddg=https://github.com/$dep_owner/$dep_repo/issues/\1)~g"
+}
+
+# A dispatcher for formatIssueLinksPlain and formatIssueLinksNoBackreferences, based on config.
+formatIssueLinks() {
+    if [[ $INPUT_GITHUB_CHANGELOG_NO_BACKREFERENCES == "true" ]]; then
+        formatIssueLinksNoBackreferences "$@"
+    else
+        formatIssueLinksPlain "$@"
+    fi
+}
+
 createPullRequestsOnUpdate() {
     echo "Checking for updates"
     if [[ -z $INPUT_PULL_REQUEST_BASE ]]; then
@@ -271,7 +305,10 @@ createPullRequestsOnUpdate() {
                 printf "## Changelog for %s:\n" "$dep"
                 printf "Branch: %s\n" "$niv_branch"
                 printf "Commits: [$dep_owner/$dep_repo@%.8s...%.8s](https://github.com/$dep_owner/$dep_repo/compare/${revision}...${new_revision})\n\n" "$revision" "$new_revision"
-                { hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true; } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' | sed "s~\(#[0-9]\+\)~$dep_owner/$dep_repo\1~g"
+                {
+                    hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true
+                } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' \
+                    | formatIssueLinks "$dep_owner" "$dep_repo"
             } >>"$message"
         fi
 

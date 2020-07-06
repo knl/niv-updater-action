@@ -116,6 +116,12 @@ jobs:
   changelog. Defaults to empty.
 * `title_prefix`: (Optional) The text that will be put in front of the
   generated commit title. Defaults to empty.
+* `github_changelog_no_backreferences`: (Optional, a boolean) If `true`, the
+  changelog will transform all issue links to links via a redirector
+  (DuckDuckGo), to prevent GitHub from backreferencing the created PR in these
+  issues. For more details, see
+  https://github.com/knl/niv-updater-action/issues/26[Issue #26]. Defaults to
+  `true`.
 
 == Secrets
 
