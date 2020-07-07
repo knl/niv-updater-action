@@ -293,7 +293,7 @@ createPullRequestsOnUpdate() {
         commit_message=$(mktemp)
         {
             cat "$title"
-            printf "\n"
+            printf '\n\n'
             cat "$message"
         } >"$commit_message"
         base64 "$wdir/$SOURCES_JSON" >>"$new_content"
