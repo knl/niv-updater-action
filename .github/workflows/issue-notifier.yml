@@ -1,8 +1,20 @@
-uses: timheuer/issue-notifier@v1.0.2
-env:
-  SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-with:
-  fromMailAddress: 'nikola+sendgrid@knezevic.ch'
-  toMailAddress: 'github@nikola.knezevic.ch'
-  subject: 'A new issue was labeled/created in niv-updater-action'
-  labelsToMonitor: '@project/notify-owners'
+name: Notify owners on new issues
+on:
+  issues:
+    types: [edited, labeled]
+
+jobs:
+  sendEmail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: issue-notifier
+        uses: timheuer/issue-notifier@v1.0.2
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+        with:
+          fromMailAddress: 'nikola+sendgrid@knezevic.ch'
+          toMailAddress: 'github@nikola.knezevic.ch'
+          subject: 'A new issue was labeled/created in niv-updater-action'
+          labelsToMonitor: '@project/notify-owners'
