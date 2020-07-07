@@ -1,0 +1,8 @@
+uses: timheuer/issue-notifier@v1.0.2
+env:
+  SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+with:
+  fromMailAddress: 'nikola+sendgrid@knezevic.ch'
+  toMailAddress: 'github@nikola.knezevic.ch'
+  subject: 'A new issue was labeled/created in niv-updater-action'
+  labelsToMonitor: '@project/notify-owners'
