@@ -11,13 +11,13 @@ error() {
 # Check if GITHUB_TOKEN is correct (maybe due to misconfiguration, we might get an expired one)
 checkCredentials() {
     if ! curl --fail -s -H "Authorization: token $GITHUB_TOKEN" 'https://api.github.com/'; then
-        error "GITHUB_TOKEN is incorrect, aborting"
+        error 'GITHUB_TOKEN is incorrect, aborting'
     fi
 }
 
 # Install all the dependencies we need, using Nix
 setupPrerequisites() {
-    echo "Installing Nix"
+    echo 'Installing Nix'
 
     # Check if some other step already installed Nix
     if [[ ! -d /nix/store ]] || ! nix --version >/dev/null 2>&1; then
@@ -28,8 +28,8 @@ setupPrerequisites() {
         sh <(curl -sSL https://nixos.org/nix/install) --no-daemon
     fi
 
-    echo "Installing Nix - done"
-    echo "Installing dependencies"
+    echo 'Installing Nix - done'
+    echo 'Installing dependencies'
 
     export PATH="${PATH}:/nix/var/nix/profiles/per-user/runner/profile/bin:/nix/var/nix/profiles/default/bin"
 
@@ -41,12 +41,12 @@ setupPrerequisites() {
     nix-env -iA niv -f https://github.com/nmattia/niv/tarball/master \
         --substituters https://niv.cachix.org \
         --trusted-public-keys niv.cachix.org-1:X32PCg2e/zAm3/uD1ScqW2z/K0LtDyNV7RdaxIuLgQM=
-    echo "Installing dependencies - done"
+    echo 'Installing dependencies - done'
 }
 
 # Setup netrc file to be used by nix-prefetch-url
 setupNetrc() {
-    if [[ $INPUT_SKIP_SSH_REPOS == "false" ]]; then
+    if [[ $INPUT_SKIP_SSH_REPOS == 'false' ]]; then
         netrc=$(mktemp)
         sudo chmod 0600 "$netrc"
         sudo sh -c "echo 'netrc-file = $netrc' >> /etc/nix/nix.conf"
@@ -86,18 +86,18 @@ sanitizeInputs() {
 
 applyLabels() {
     if [[ -z $INPUT_LABELS ]]; then
-        echo "No labels to add"
+        echo 'No labels to add'
         return
     fi
 
-    echo "Adding labels to the PR"
+    echo 'Adding labels to the PR'
 
     local pr_data
     pr_data="$1"
 
-    pr_number="$(jq -r ".number // empty" <"$pr_data")"
+    pr_number="$(jq -r '.number // empty' <"$pr_data")"
     if [[ -z $pr_number ]]; then
-        echo "::warning::could not get the PR number from the json payload, skipping adding labels"
+        echo '::warning::could not get the PR number from the json payload, skipping adding labels'
         return
     fi
 
@@ -138,12 +138,12 @@ formatIssueLinksNoBackreferences() {
 # Similarly to formatIssueLinksNoBackreferences, we add UNICODE WORD JOINER
 # between the '@' and the username
 formatMentions() {
-    sed "s~\B@\([a-zA-Z0-9]\)~@\xe2\x81\xa0\1~g"
+    sed 's~\B@\([a-zA-Z0-9]\)~@\xe2\x81\xa0\1~g'
 }
 
 # A dispatcher for formatIssueLinksPlain and formatIssueLinksNoBackreferences, based on config.
 formatIssueLinks() {
-    if [[ $INPUT_GITHUB_CHANGELOG_NO_BACKREFERENCES == "true" ]]; then
+    if [[ $INPUT_GITHUB_CHANGELOG_NO_BACKREFERENCES == 'true' ]]; then
         formatIssueLinksNoBackreferences "$@"
     else
         formatIssueLinksPlain "$@"
@@ -151,7 +151,7 @@ formatIssueLinks() {
 }
 
 createPullRequestsOnUpdate() {
-    echo "Checking for updates"
+    echo 'Checking for updates'
     if [[ -z $INPUT_PULL_REQUEST_BASE ]]; then
         INPUT_PULL_REQUEST_BASE="$GITHUB_REF"
         base="$GITHUB_SHA"
@@ -162,10 +162,10 @@ createPullRequestsOnUpdate() {
 
     echo "Will use branch '$INPUT_PULL_REQUEST_BASE' (ref: $base) as the base branch"
 
-    merges_filter=""
-    if [[ $INPUT_SHOW_MERGES == "false" ]]; then
+    merges_filter=''
+    if [[ $INPUT_SHOW_MERGES == 'false' ]]; then
         # a filter for jq, to be used in the query for getting the changelog
-        merges_filter="| select((.parents | length) < 2)"
+        merges_filter='| select((.parents | length) < 2)'
     fi
 
     SOURCES_JSON='nix/sources.json'
@@ -174,7 +174,7 @@ createPullRequestsOnUpdate() {
     # get the content
     sj=$(mktemp)
     if ! hub api -XGET -F ref="$base" "/repos/$GITHUB_REPOSITORY/contents/$INPUT_SOURCES_FILE" >>"$sj"; then
-        error "could not fetch sources.json"
+        error 'could not fetch sources.json'
     fi
     echo "Getting $INPUT_SOURCES_FILE from $GITHUB_REPOSITORY (ref: $base) - done"
 
@@ -183,12 +183,12 @@ createPullRequestsOnUpdate() {
 
     if [[ -n $INPUT_WHITELIST ]]; then
         # Can't do <<< as it *appends* a newline :(
-        mapfile -td , all_deps < <(printf "%s" "$INPUT_WHITELIST")
+        mapfile -td , all_deps < <(printf '%s' "$INPUT_WHITELIST")
     else
         mapfile -t all_deps < <(jq -r 'keys[]' <<<"$content")
     fi
 
-    echo "Going through all dependencies"
+    echo 'Going through all dependencies'
     for dep in "${all_deps[@]}"; do
         echo "Processing dependency '$dep'"
 
@@ -200,7 +200,7 @@ createPullRequestsOnUpdate() {
         revision="$(jq -r ".\"$dep\".rev" <<<"$content")"
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
-        if [[ $INPUT_SKIP_VERSIONED_REVISIONS == "true" && ! ($revision =~ ^[a-f0-9A-F]{40}$ || $revision =~ ^[a-f0-9A-F]{7}) ]]; then
+        if [[ $INPUT_SKIP_VERSIONED_REVISIONS == 'true' && ! ($revision =~ ^[a-f0-9A-F]{40}$ || $revision =~ ^[a-f0-9A-F]{7}) ]]; then
             echo "Revision '$revision' looks like a regular version string, and skip_versioned_revisions is set, skipping."
             continue
         fi
@@ -222,11 +222,11 @@ createPullRequestsOnUpdate() {
         dep_repo="$(jq -r ".\"$dep\".repo // empty" <<<"$content")"
         dep_url="$(jq -r ".\"$dep\".url // empty" <<<"$content" | { grep github.com || true; })"
         github_ssh="$(jq -r ".\"$dep\".repo // empty" <<<"$content" | { grep -F 'ssh://git@github.com' || true; })"
-        [[ -n $dep_url || -n $github_ssh ]] && is_github="yes" || is_github=""
+        [[ -n $dep_url || -n $github_ssh ]] && is_github='yes' || is_github=''
 
         # skip if github_ssh and skip_ssh_repos is in effect
-        if [[ -n $github_ssh && $INPUT_SKIP_SSH_REPOS == "true" ]]; then
-            echo "Hosted by a repository accessible over SSH, and skip_ssh_repos is set, skipping."
+        if [[ -n $github_ssh && $INPUT_SKIP_SSH_REPOS == 'true' ]]; then
+            echo 'Hosted by a repository accessible over SSH, and skip_ssh_repos is set, skipping.'
             continue
         fi
 
@@ -247,7 +247,7 @@ createPullRequestsOnUpdate() {
 
             # rewrite the entry so that we can use token instead of SSH
             if [[ -n $github_ssh ]]; then
-                echo "As this is a dependency fetched with SSH, trying to switch to https type"
+                echo 'As this is a dependency fetched with SSH, trying to switch to https type'
                 niv_branch="$(jq -r ".\"$dep\".ref // empty" <"$wdir/$SOURCES_JSON")"
                 niv drop "$dep"
                 niv add "$dep_owner/$dep_repo" -a rev="$revision" -a branch="$niv_branch"
@@ -285,7 +285,7 @@ createPullRequestsOnUpdate() {
 
             # rewrite the entry so that we can use token instead of SSH
             if [[ -n $github_ssh ]]; then
-                echo "Reverting the dependency back to SSH"
+                echo 'Reverting the dependency back to SSH'
                 echo "$content" >"$wdir/$SOURCES_JSON"
                 niv modify "$dep" -a rev="$new_revision"
             fi
@@ -295,12 +295,12 @@ createPullRequestsOnUpdate() {
         title=$(mktemp)
         message=$(mktemp)
 
-        printf "Will generate the Pull Request message for '$dep', update from %.8s to %.8s\n" "$revision" "$new_revision"
+        printf 'Will generate the Pull Request message for '%s', update from %.8s to %.8s\n' "$dep" "$revision" "$new_revision"
 
-        printf "%sniv %s: update %.8s -> %.8s" "$INPUT_TITLE_PREFIX${INPUT_TITLE_PREFIX:+ }" "$dep" "$revision" "$new_revision" >>"$title"
+        printf '%sniv %s: update %.8s -> %.8s' "$INPUT_TITLE_PREFIX${INPUT_TITLE_PREFIX:+ }" "$dep" "$revision" "$new_revision" >>"$title"
 
         # print with a new line appended, as yaml swallows those
-        printf "%s%s" "$INPUT_MESSAGE_PREFIX" "${INPUT_MESSAGE_PREFIX:+$'\n'}" >>"$message"
+        printf '%s%s' "$INPUT_MESSAGE_PREFIX" "${INPUT_MESSAGE_PREFIX:+$'\n'}" >>"$message"
 
         # get a short changelog if we're on github
         if [[ -z $is_github ]]; then
@@ -311,9 +311,9 @@ createPullRequestsOnUpdate() {
 
             {
                 niv_branch="$(jq -r ".\"$dep\".ref // empty" <"$wdir/$SOURCES_JSON")"
-                printf "## Changelog for %s:\n" "$dep"
-                printf "Branch: %s\n" "$niv_branch"
-                printf "Commits: [$dep_owner/$dep_repo@%.8s...%.8s](https://github.com/$dep_owner/$dep_repo/compare/${revision}...${new_revision})\n\n" "$revision" "$new_revision"
+                printf '## Changelog for %s:\n' "$dep"
+                printf 'Branch: %s\n' "$niv_branch"
+                printf 'Commits: [%s/%s@%.8s...%.8s](https://github.com/%s/%s/compare/%s...%s)\n\n' "$dep_owner" "$dep_repo" "$revision" "$new_revision" "$dep_owner" "$dep_repo" "$revision" "$new_revision"
                 {
                     hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true
                 } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' \
@@ -323,7 +323,7 @@ createPullRequestsOnUpdate() {
         fi
 
         # print with a new line appended, as yaml swallows those
-        printf "%s%s" "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}" >>"$message"
+        printf '%s%s' "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}" >>"$message"
 
         # create the branch
         echo "Creating branch '$branch_name' for the update of '$dep'"
@@ -366,7 +366,7 @@ createPullRequestsOnUpdate() {
             "/repos/$GITHUB_REPOSITORY/pulls" >>"$pr_data"; then
             # try to delete the branch
             hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
-            error "could not create a PR"
+            error 'could not create a PR'
         fi
 
         applyLabels "$pr_data"
@@ -382,7 +382,7 @@ createPullRequestsOnUpdate() {
         echo "Processing dependency '$dep' - done"
     done
     rm -f "$sj"
-    echo "Checking for updates - done"
+    echo 'Checking for updates - done'
 }
 
 checkCredentials
