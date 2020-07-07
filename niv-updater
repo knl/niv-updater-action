@@ -132,6 +132,15 @@ formatIssueLinksNoBackreferences() {
     sed "s~#\([0-9]\+\)~[$dep_owner/$dep_repo\xe2\x81\xa0#\1](http://r.duckduckgo.com/l/?uddg=https://github.com/$dep_owner/$dep_repo/issues/\1)~g"
 }
 
+# This function formats mentions in the generated changelog in such a way that
+# GitHub doesn't ping the mentioned person. This is to remove the noise we might
+# throw at our fellow developers.
+# Similarly to formatIssueLinksNoBackreferences, we add UNICODE WORD JOINER
+# between the '@' and the username
+formatMentions() {
+    sed "s~\B@\([a-zA-Z0-9]\)~@\xe2\x81\xa0\1~g"
+}
+
 # A dispatcher for formatIssueLinksPlain and formatIssueLinksNoBackreferences, based on config.
 formatIssueLinks() {
     if [[ $INPUT_GITHUB_CHANGELOG_NO_BACKREFERENCES == "true" ]]; then
@@ -308,7 +317,8 @@ createPullRequestsOnUpdate() {
                 {
                     hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true
                 } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' \
-                    | formatIssueLinks "$dep_owner" "$dep_repo"
+                    | formatIssueLinks "$dep_owner" "$dep_repo" \
+                    | formatMentions
             } >>"$message"
         fi
 
