@@ -254,7 +254,7 @@ createPullRequestsOnUpdate() {
 
         printf "Will generate the Pull Request message for '$dep', update from %.8s to %.8s\n" "$revision" "$new_revision"
 
-        printf "%s niv %s: update %.8s -> %.8s" "$INPUT_TITLE_PREFIX" "$dep" "$revision" "$new_revision" >>"$title"
+        printf "%sniv %s: update %.8s -> %.8s" "$INPUT_TITLE_PREFIX${INPUT_TITLE_PREFIX:+ }" "$dep" "$revision" "$new_revision" >>"$title"
 
         # print with a new line appended, as yaml swallows those
         printf "%s%s" "$INPUT_MESSAGE_PREFIX" "${INPUT_MESSAGE_PREFIX:+$'\n'}" >>"$message"
