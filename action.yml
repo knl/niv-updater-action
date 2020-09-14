@@ -13,6 +13,10 @@ inputs:
     description: 'The path in the repo to the sources.json file. This value will be passed to niv via `--sources-file` option. Defaults to `nix/sources.json`.'
     required: false
     default: 'nix/sources.json'
+  niv_version:
+    description: 'The niv version to be used. Defaults to `master`, meaning niv-updater-action will take the latest niv for each run. You may want to fix a particular version and avoid future breaks to your workflow.'
+    required: false
+    default: 'master'
   branch_prefix:
     description: 'The prefix used for update branches, created by this action. The action does not sanitize the branch name. For a description of what a valid branch name is, please consult: https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html. Defaults to "update/".'
     required: false
