@@ -38,7 +38,7 @@ setupPrerequisites() {
 
     # we also need jq, hub, and git, but they both come with ubuntu-latest with GitHub Actions
     # https://github.com/actions/virtual-environments/blob/master/images/linux/Ubuntu1804-README.md
-    nix-env -iA niv -f https://github.com/nmattia/niv/tarball/master \
+    nix-env -iA niv -f "https://github.com/nmattia/niv/tarball/$INPUT_NIV_VERSION" \
         --substituters https://niv.cachix.org \
         --trusted-public-keys niv.cachix.org-1:X32PCg2e/zAm3/uD1ScqW2z/K0LtDyNV7RdaxIuLgQM=
     echo 'Installing dependencies - done'
