@@ -61,6 +61,10 @@ inputs:
     description: 'If `true`, the changelog will transform all issue links to links via a redirector, to prevent GitHub from backreferencing the created PR in these issues. Defaults to `true`.'
     required: false
     default: true
+  debug_output:
+    description: If `true`, `set -x` will be turned on for the updater script, outputing every step the action takes. This will show up in the action log, and could be useful for trying to reproduce issues locally. Defaults to `false`.
+    required: false
+    default: false
 
 branding:
   # maybe 'refresh-cw'
