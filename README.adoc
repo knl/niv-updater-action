@@ -70,6 +70,8 @@ jobs:
             Notify @myorg/myteam.
           # Have a prefix to the commit title itself, for example, to support conventional commits.
           title_prefix: refactor:
+          # Do not output lines as they are executed (`set -x`)
+          debug_output: false
 ----
 
 == Configuration
@@ -130,6 +132,10 @@ jobs:
   issues. For more details, see
   https://github.com/knl/niv-updater-action/issues/26[Issue #26]. Defaults to
   `true`.
+* `debug_output`: (Optional, a boolean) If `true`, `set -x` will be turned on
+  for the updater script, outputing every step the action takes. This will show
+  up in the action log, and could be useful for trying to reproduce issues
+  locally. Defaults to `false`.
 
 == Secrets
 

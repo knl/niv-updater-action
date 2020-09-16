@@ -385,6 +385,10 @@ createPullRequestsOnUpdate() {
     echo 'Checking for updates - done'
 }
 
+if [[ $INPUT_DEBUG_OUTPUT == 'true' ]]; then
+    set -x
+fi
+
 checkCredentials
 setupPrerequisites
 setupNetrc
