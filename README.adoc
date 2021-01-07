@@ -60,6 +60,9 @@ jobs:
   of what a valid branch name is, please consult:
   https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html.
   Defaults to "update/".
+* `keep_updating`: (Optional) If PR already exists, keep it updated with new
+  changes. The branch will be force updated, as this process keeps a single
+  commit on a branch. Defaults to `false` to maintain the old behaviour.
 * `skip_versioned_revisions`: (Optional, a boolean) If `true`, will cause the
   action to skip updating any dependency that has a version in their revision.
   This is due to the way niv currently works, where it will always update to the
@@ -131,6 +134,8 @@ jobs:
           sources_file: 'nix/sources.json'
           # The niv version to use. `master` will track the latest niv.
           niv_version: 'master'
+          # Keep the PR updated with new changes
+          keep_updating: true
           # The prefix to add to every created branch
           branch_prefix: 'update/'
           # Update all dependencies tracked by niv. Another example: 'common,jq,hub'
