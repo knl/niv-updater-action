@@ -8,6 +8,10 @@ error() {
     exit 1
 }
 
+warn() {
+    echo "::warning::$*"
+}
+
 # Check if GITHUB_TOKEN is correct (maybe due to misconfiguration, we might get an expired one)
 checkCredentials() {
     if ! curl --fail -s -H "Authorization: token $GITHUB_TOKEN" 'https://api.github.com/'; then
@@ -36,11 +40,13 @@ setupPrerequisites() {
     # shellcheck disable=SC1090
     source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
 
-    # we also need jq, hub, and git, but they both come with ubuntu-latest with GitHub Actions
+    # we also need hub, and git, but they both come with ubuntu-latest with GitHub Actions
     # https://github.com/actions/virtual-environments/blob/master/images/linux/Ubuntu1804-README.md
     nix-env -iA niv -f "https://github.com/nmattia/niv/tarball/$INPUT_NIV_VERSION" \
         --substituters https://niv.cachix.org \
         --trusted-public-keys niv.cachix.org-1:X32PCg2e/zAm3/uD1ScqW2z/K0LtDyNV7RdaxIuLgQM=
+    # We need --rawfile for jq, available in jq 1.6, which is only available on ubuntu 20.04 and macos
+    nix-env -iA nixpkgs.jq
     echo 'Installing dependencies - done'
 }
 
@@ -206,12 +212,18 @@ createPullRequestsOnUpdate() {
             continue
         fi
 
-        # check if the branch exists first, and skip if it does
+        # check if the branch exists first.
+        # If it exists and we're not updating the PR, then skip.
         branch_name="$INPUT_BRANCH_PREFIX$dep-$revision"
 
+        branch_exists='no'
         if hub api "/repos/$GITHUB_REPOSITORY/branches/$branch_name" >/dev/null; then
-            echo "branch '$branch_name' already exists, skipping."
-            continue
+            if [[ $INPUT_KEEP_UPDATING == 'true' ]]; then
+                branch_exists='yes'
+            else
+                echo "branch '$branch_name' already exists, skipping."
+                continue
+            fi
         fi
 
         echo "Will use branch '$branch_name' for the possible update"
@@ -326,55 +338,164 @@ createPullRequestsOnUpdate() {
         # print with a new line appended, as yaml swallows those
         printf '%s%s' "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}" >>"$message"
 
-        # create the branch
-        echo "Creating branch '$branch_name' for the update of '$dep'"
-        if ! hub api \
-            -F ref="refs/heads/$branch_name" \
-            -F sha="$base" \
-            "/repos/$GITHUB_REPOSITORY/git/refs" >/dev/null; then
-            error "could not create branch $branch_name"
-        fi
-
-        # upload the content
-        echo "Uploading the new $INPUT_SOURCES_FILE"
-        new_content=$(mktemp)
         commit_message=$(mktemp)
         {
             cat "$title"
             printf '\n\n'
             cat "$message"
         } >"$commit_message"
+
+        new_content=$(mktemp)
         base64 "$wdir/$SOURCES_JSON" >>"$new_content"
-        if ! hub api -XPUT \
-            -F message=@"$commit_message" \
-            -F content=@"$new_content" \
-            -F sha="$file_sha" \
-            -F branch="$branch_name" \
-            "/repos/$GITHUB_REPOSITORY/contents/$INPUT_SOURCES_FILE" >/dev/null; then
-            # try to delete the branch
-            hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
-            error "could not upload content to $branch_name"
-        fi
 
-        # create a PR, use API to avoid the need for a local checkout
-        echo "Creating a PR for updating '$dep', branch name is '$branch_name'"
-        pr_data=$(mktemp)
-        if ! hub api -XPOST \
-            -F head="$branch_name" \
-            -F base="$INPUT_PULL_REQUEST_BASE" \
-            -F title=@"$title" \
-            -F body=@"$message" \
-            "/repos/$GITHUB_REPOSITORY/pulls" >>"$pr_data"; then
-            # try to delete the branch
-            hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
-            error 'could not create a PR'
-        fi
+        # This is the behaviour when the branch doesn't exist
+        if [[ $branch_exists == 'no' ]]; then
+            # create the branch
+            echo "Creating branch '$branch_name' for the update of '$dep'"
+            if ! hub api \
+                -F ref="refs/heads/$branch_name" \
+                -F sha="$base" \
+                "/repos/$GITHUB_REPOSITORY/git/refs" >/dev/null; then
+                error "could not create branch $branch_name"
+            fi
 
-        applyLabels "$pr_data"
+            # upload the content
+            echo "Uploading the new $INPUT_SOURCES_FILE"
+            # https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#create-or-update-file-contents
+            if ! hub api -XPUT \
+                -F message=@"$commit_message" \
+                -F content=@"$new_content" \
+                -F sha="$file_sha" \
+                -F branch="$branch_name" \
+                "/repos/$GITHUB_REPOSITORY/contents/$INPUT_SOURCES_FILE" >/dev/null; then
+                # try to delete the branch if adding a new content fails
+                hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
+                error "could not upload content to $branch_name"
+            fi
+
+            # create a PR, use API to avoid the need for a local checkout
+            echo "Creating a PR for updating '$dep', branch name is '$branch_name'"
+            pr_data=$(mktemp)
+            if ! hub api -XPOST \
+                -F head="$branch_name" \
+                -F base="$INPUT_PULL_REQUEST_BASE" \
+                -F title=@"$title" \
+                -F body=@"$message" \
+                "/repos/$GITHUB_REPOSITORY/pulls" >>"$pr_data"; then
+                # try to delete the branch
+                hub api -XDELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null || true
+                error 'could not create a PR'
+            fi
+
+            applyLabels "$pr_data"
+
+            # cleanup
+            rm -f "$pr_data"
+        else
+            # The branch already exists and we need to update it.
+            # The update will actually be the force update, where we create a new tree and commit objects,
+            # and then update the reference and the PR description.
+
+            # The steps are:
+
+            # 0. check if the file is the same and skip in that case
+            current_content=$(mktemp)
+            if ! hub api -XGET -F ref="$branch_name" "/repos/$GITHUB_REPOSITORY/contents/$INPUT_SOURCES_FILE" \
+                | jq -jr '.content' | base64 -d >"$current_content"; then
+                # We can't just warn and proceed here, as subsequent calls to create a tree might fail
+                # if the tree already exists
+                error 'could not get the old branch content, aborting'
+            fi
+
+            # This is a trick to exit early if the content is the same
+            # shellcheck disable=SC2034,SC2043
+            for irrelevant in "run_once"; do
+                if diff -q "$current_content" "$wdir/$SOURCES_JSON"; then
+                    echo 'files are the same, no need to update the PR'
+                    break
+                fi
+                # 1. get the base commit sha - done before the if statement
+
+                # 2. get the base tree from the base commit sha
+                base_tree="$(hub api "/repos/$GITHUB_REPOSITORY/git/commits/$base" | jq -jr '.tree.sha')"
+
+                # 3a. create a new blob with the content
+                blob_data=$(mktemp)
+                if ! hub api -XPOST -f encoding=base64 \
+                    -F content=@"$new_content" \
+                    "/repos/$GITHUB_REPOSITORY/git/blobs" >"$blob_data"; then
+                    # There is nothing better to do
+                    error 'could not create a blob for the new content'
+                fi
+
+                # 3b. create a new tree with the file update
+                tree_data=$(mktemp)
+                # Per: https://docs.github.com/en/free-pro-team@latest/rest/reference/git#create-a-tree
+                # one must not provide both sha and content
+                if ! jq --arg path "$INPUT_SOURCES_FILE" --arg base_tree "$base_tree" \
+                    '{base_tree: $base_tree, tree: [{path: $path, mode: "100644", type: "blob", content: null, sha}]}' \
+                    <"$blob_data" \
+                    | hub api -XPOST --input - \
+                        "/repos/$GITHUB_REPOSITORY/git/trees" >>"$tree_data"; then
+                    # There is nothing better to do
+                    error 'could not create a new tree with updated content'
+                fi
+
+                # 4. create a new commit
+                commit_data=$(mktemp)
+                if ! jq -ncj \
+                    --arg parent "$base" \
+                    --arg tree "$(jq -jr '.sha' <"$tree_data")" \
+                    --rawfile message "$message" \
+                    '{message: $message, tree: $tree, parents: [$parent]}' \
+                    | hub api -XPOST \
+                        --input - \
+                        "/repos/$GITHUB_REPOSITORY/git/commits" \
+                        >"$commit_data"; then
+                    # There is nothing better to do
+                    error 'could not create a new commit with PR updates'
+                fi
+
+                # 5. update reference to point to the new commit
+                old_branch_sha="$(hub api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch_name" | jq -jr '.object.sha')"
+                if ! hub api -XPATCH \
+                    -F force=true \
+                    -F sha="$(jq -jr '.sha' <"$commit_data")" \
+                    "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null; then
+                    # There is nothing better to do
+                    error 'could not update the branch to point to the new commit'
+                fi
+
+                # 6. find the PR for the branch
+                pr_number="$(hub pr list -s "open" --head "$branch_name" -f "%I")"
+
+                # 7. update PR description and title
+                if ! hub api -XPATCH \
+                    -F body=@"$message" \
+                    -F title=@"$title" \
+                    "/repos/$GITHUB_REPOSITORY/pulls/$pr_number" >/dev/null; then
+                    # It would be good to roll back here to the previous commit
+                    warn 'could not update the PR description, reverting to the previous commit'
+                    if ! hub api -XPATCH \
+                        -F force=true \
+                        -F sha="$old_branch_sha" \
+                        "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch_name" >/dev/null; then
+                        # There is nothing better to do
+                        error 'could not revert the branch to point to the old commit'
+                    fi
+                fi
+
+                # cleanup
+                rm -f "$tree_data"
+                rm -f "$commit_data"
+            done
+
+            # cleanup
+            rm -f "$current_content"
+        fi
 
         # cleanup
         rm -rf "$wdir"
-        rm -f "$pr_data"
         rm -f "$new_content"
         rm -f "$commit_message"
         rm -f "$message"
