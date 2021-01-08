@@ -95,14 +95,15 @@ applyLabels() {
     local pr_data
     pr_data="$1"
 
-    pr_number="$(jq -r '.number // empty' <"$pr_data")"
+    pr_number="$(jq -jr '.number // empty' <"$pr_data")"
     if [[ -z $pr_number ]]; then
         echo '::warning::could not get the PR number from the json payload, skipping adding labels'
         return
     fi
 
-    if ! jq -n --arg labs "$INPUT_LABELS" '{labels: $labs | split("\n") }' | hub api -XPOST --input - \
-        "/repos/$GITHUB_REPOSITORY/issues/$pr_number/labels" >/dev/null; then
+    if ! jq -n --arg labs "$INPUT_LABELS" '{labels: $labs | split("\n") }' \
+        | hub api -XPOST --input - \
+            "/repos/$GITHUB_REPOSITORY/issues/$pr_number/labels" >/dev/null; then
         echo "::warning::could not assign labels to the PR $pr_number"
     fi
 }
@@ -157,7 +158,7 @@ createPullRequestsOnUpdate() {
         base="$GITHUB_SHA"
     else
         # get the SHA of the current base, so that it remains fixed during the run
-        base="$(hub api "/repos/$GITHUB_REPOSITORY/branches/$INPUT_PULL_REQUEST_BASE" | jq -r '.commit.sha')"
+        base="$(hub api "/repos/$GITHUB_REPOSITORY/branches/$INPUT_PULL_REQUEST_BASE" | jq -jr '.commit.sha')"
     fi
 
     echo "Will use branch '$INPUT_PULL_REQUEST_BASE' (ref: $base) as the base branch"
@@ -178,7 +179,7 @@ createPullRequestsOnUpdate() {
     fi
     echo "Getting $INPUT_SOURCES_FILE from $GITHUB_REPOSITORY (ref: $base) - done"
 
-    file_sha="$(jq -r '.sha' <"$sj")"
+    file_sha="$(jq -jr '.sha' <"$sj")"
     content="$(jq -r '.content' <"$sj" | base64 -d)"
 
     if [[ -n $INPUT_WHITELIST ]]; then
@@ -197,7 +198,7 @@ createPullRequestsOnUpdate() {
             continue
         fi
 
-        revision="$(jq -r ".\"$dep\".rev" <<<"$content")"
+        revision="$(jq -jr ".\"$dep\".rev" <<<"$content")"
 
         # check if revision doesn't look like sha, and if skip_versioned_revisions is set, skip
         if [[ $INPUT_SKIP_VERSIONED_REVISIONS == 'true' && ! ($revision =~ ^[a-f0-9A-F]{40}$ || $revision =~ ^[a-f0-9A-F]{7}) ]]; then
@@ -218,10 +219,10 @@ createPullRequestsOnUpdate() {
         # since this is an action, we don't have SSH keys available
         # but we do have tokens that are useful
         # check if the dependency is to github
-        dep_owner="$(jq -r ".\"$dep\".owner // empty" <<<"$content")"
-        dep_repo="$(jq -r ".\"$dep\".repo // empty" <<<"$content")"
-        dep_url="$(jq -r ".\"$dep\".url // empty" <<<"$content" | { grep github.com || true; })"
-        github_ssh="$(jq -r ".\"$dep\".repo // empty" <<<"$content" | { grep -F 'ssh://git@github.com' || true; })"
+        dep_owner="$(jq -jr ".\"$dep\".owner // empty" <<<"$content")"
+        dep_repo="$(jq -jr ".\"$dep\".repo // empty" <<<"$content")"
+        dep_url="$(jq -jr ".\"$dep\".url // empty" <<<"$content" | { grep github.com || true; })"
+        github_ssh="$(jq -jr ".\"$dep\".repo // empty" <<<"$content" | { grep -F 'ssh://git@github.com' || true; })"
         [[ -n $dep_url || -n $github_ssh ]] && is_github='yes' || is_github=''
 
         # skip if github_ssh and skip_ssh_repos is in effect
@@ -248,7 +249,7 @@ createPullRequestsOnUpdate() {
             # rewrite the entry so that we can use token instead of SSH
             if [[ -n $github_ssh ]]; then
                 echo 'As this is a dependency fetched with SSH, trying to switch to https type'
-                niv_branch="$(jq -r ".\"$dep\".branch // empty" <"$wdir/$SOURCES_JSON")"
+                niv_branch="$(jq -jr ".\"$dep\".branch // empty" <"$wdir/$SOURCES_JSON")"
                 niv drop "$dep"
                 niv add "$dep_owner/$dep_repo" -a rev="$revision" -a branch="$niv_branch"
                 rm "$SOURCES_JSON.orig"
@@ -272,7 +273,7 @@ createPullRequestsOnUpdate() {
             continue
         fi
 
-        new_revision="$(jq -r ".\"$dep\".rev" <"$wdir/$SOURCES_JSON")"
+        new_revision="$(jq -jr ".\"$dep\".rev" <"$wdir/$SOURCES_JSON")"
 
         if [[ $revision == "$new_revision" ]]; then
             echo "The new version ($new_revision) is the same as old ($revision) for $dep, skipping"
@@ -310,7 +311,7 @@ createPullRequestsOnUpdate() {
             echo "Dependency '$dep' is hosted on github.com"
 
             {
-                niv_branch="$(jq -r ".\"$dep\".branch // empty" <"$wdir/$SOURCES_JSON")"
+                niv_branch="$(jq -jr ".\"$dep\".branch // empty" <"$wdir/$SOURCES_JSON")"
                 printf '## Changelog for %s:\n' "$dep"
                 printf 'Branch: %s\n' "$niv_branch"
                 printf 'Commits: [%s/%s@%.8s...%.8s](https://github.com/%s/%s/compare/%s...%s)\n\n' "$dep_owner" "$dep_repo" "$revision" "$new_revision" "$dep_owner" "$dep_repo" "$revision" "$new_revision"
