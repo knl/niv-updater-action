@@ -467,7 +467,24 @@ createPullRequestsOnUpdate() {
                 fi
 
                 # 6. find the PR for the branch
-                pr_number="$(hub pr list -s "open" --head "$branch_name" -f "%I")"
+                # The best way to do it is via GraphQL
+                pr_number_data=$(mktemp)
+                # shellcheck disable=SC2016
+                if ! hub api graphql -f owner="${GITHUB_REPOSITORY%/*}" -f name="${GITHUB_REPOSITORY#*/}" -f branch="$branch_name" -f query='
+                    query PrNumber($owner: String!, $name: String!, $branch: String!) {
+                      repository(owner: $owner, name: $name) {
+                        pullRequests(last: 1, states: OPEN, headRefName: $branch) {
+                          nodes {
+                            number
+                          }
+                        }
+                      }
+                    }' >"$pr_number_data"; then
+                    # There is nothing better to do
+                    error 'could not get the PR number for this branch'
+                fi
+
+                pr_number="$(jq '.data.repository.pullRequests.nodes[].number' <"$pr_number_data")"
 
                 # 7. update PR description and title
                 if ! hub api -XPATCH \
@@ -488,6 +505,7 @@ createPullRequestsOnUpdate() {
                 # cleanup
                 rm -f "$tree_data"
                 rm -f "$commit_data"
+                rm -f "$pr_number_data"
             done
 
             # cleanup
