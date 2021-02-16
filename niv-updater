@@ -234,7 +234,10 @@ createPullRequestsOnUpdate() {
         dep_owner="$(jq -jr ".\"$dep\".owner // empty" <<<"$content")"
         dep_repo="$(jq -jr ".\"$dep\".repo // empty" <<<"$content")"
         dep_url="$(jq -jr ".\"$dep\".url // empty" <<<"$content" | { grep github.com || true; })"
-        github_ssh="$(jq -jr ".\"$dep\".repo // empty" <<<"$content" | { grep -F 'ssh://git@github.com' || true; })"
+        # Here, we want to recognize the following URLs:
+        # ((git+)?ssh://)?git@github.com(:<port>)?[:/]owner/repo[.git]?
+        # That is, optional scheme (ssh), followed by git@github.com, followed with optional port and either : or /
+        github_ssh="$(jq -jr ".\"$dep\".repo // empty" <<<"$content" | { grep -E '^((git\+)?ssh://)?git@github.com(:[[:digit:]]+)?[:/]?' || true; })"
         [[ -n $dep_url || -n $github_ssh ]] && is_github='yes' || is_github=''
 
         # skip if github_ssh and skip_ssh_repos is in effect
@@ -245,9 +248,10 @@ createPullRequestsOnUpdate() {
 
         # try extracting the owner and the repo
         if [[ -n $github_ssh ]]; then
-            owner_repo="${github_ssh#ssh://git@github.com/}"
-            dep_owner="${owner_repo%/*}"
-            dep_repo="${owner_repo#*/}"
+            # Here, we can be lenient. If niv already added some entries, we know they are correct.
+            # Thus, we extract something that looks like 'owner/repo.git' from the end of the string.
+            dep_owner="$(echo "$github_ssh" | perl -nle 'print $1 if m/[:\/]([\w-]{1,39})\/([\w_.]+?)(?:\.git)?$/;')"
+            dep_repo="$(echo "$github_ssh" | perl -nle 'print $2 if m/[:\/]([\w-]{1,39})\/([\w_.]+?)(?:\.git)?$/;')"
         fi
 
         # check if there is an update by running niv
