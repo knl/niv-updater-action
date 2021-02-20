@@ -446,7 +446,7 @@ createPullRequestsOnUpdate() {
                 if ! jq -ncj \
                     --arg parent "$base" \
                     --arg tree "$(jq -jr '.sha' <"$tree_data")" \
-                    --rawfile message "$message" \
+                    --rawfile message "$commit_message" \
                     '{message: $message, tree: $tree, parents: [$parent]}' \
                     | hub api -XPOST \
                         --input - \
