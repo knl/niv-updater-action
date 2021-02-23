@@ -164,7 +164,13 @@ createPullRequestsOnUpdate() {
         base="$GITHUB_SHA"
     else
         # get the SHA of the current base, so that it remains fixed during the run
-        base="$(hub api "/repos/$GITHUB_REPOSITORY/branches/$INPUT_PULL_REQUEST_BASE" | jq -jr '.commit.sha')"
+        # This can fail if the branch doesn't exist. jq would return nothing in that case.
+        set +euo pipefail
+        base="$(hub api "/repos/$GITHUB_REPOSITORY/branches/$INPUT_PULL_REQUEST_BASE" | jq -jr '.commit.sha // empty')"
+        if [[ -z $base ]]; then
+            error "Could not get the SHA for branch '$INPUT_PULL_REQUEST_BASE'"
+        fi
+        set -euo pipefail
     fi
 
     echo "Will use branch '$INPUT_PULL_REQUEST_BASE' (ref: $base) as the base branch"

@@ -8,7 +8,7 @@ inputs:
   pull_request_base:
     description: 'The name of the branch to issue the pull requests against. Defaults to an empty string, which means to take the default branch for the repository.'
     required: false
-    default: 'master'
+    default: ''
   sources_file:
     description: 'The path in the repo to the sources.json file. This value will be passed to niv via `--sources-file` option. Defaults to `nix/sources.json`.'
     required: false
