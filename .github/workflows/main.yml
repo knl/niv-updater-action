@@ -3,14 +3,14 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
     paths-ignore:
       - 'README.adoc'
       - 'LICENSE'
       - '.gitignore'
   pull_request:
     branches:
-      - master
+      - main
     paths-ignore:
       - 'README.adoc'
       - 'LICENSE'
