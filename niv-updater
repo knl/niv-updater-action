@@ -256,8 +256,8 @@ createPullRequestsOnUpdate() {
         if [[ -n $github_ssh ]]; then
             # Here, we can be lenient. If niv already added some entries, we know they are correct.
             # Thus, we extract something that looks like 'owner/repo.git' from the end of the string.
-            dep_owner="$(echo "$github_ssh" | perl -nle 'print $1 if m/[:\/]([\w-]{1,39})\/([\w_.]+?)(?:\.git)?$/;')"
-            dep_repo="$(echo "$github_ssh" | perl -nle 'print $2 if m/[:\/]([\w-]{1,39})\/([\w_.]+?)(?:\.git)?$/;')"
+            dep_owner="$(echo "$github_ssh" | perl -nle 'print $1 if m/[:\/]([\w-]{1,39})\/([\w_.-]+?)(?:\.git)?$/;')"
+            dep_repo="$(echo "$github_ssh" | perl -nle 'print $2 if m/[:\/]([\w-]{1,39})\/([\w_.-]+?)(?:\.git)?$/;')"
         fi
 
         # check if there is an update by running niv
