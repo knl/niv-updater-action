@@ -42,9 +42,11 @@ setupPrerequisites() {
 
     # we also need hub, and git, but they both come with ubuntu-latest with GitHub Actions
     # https://github.com/actions/virtual-environments/blob/master/images/linux/Ubuntu1804-README.md
+    # NOTE: We add 'cache.nixos.org' as a substituer because niv uses it as an upstream cache:
+    # https://blog.cachix.org/posts/2020-07-28-upstream-caches-avoiding-pushing-paths-in-cache-nixos-org/
     nix-env -iA niv -f "https://github.com/nmattia/niv/tarball/$INPUT_NIV_VERSION" \
-        --substituters https://niv.cachix.org \
-        --trusted-public-keys niv.cachix.org-1:X32PCg2e/zAm3/uD1ScqW2z/K0LtDyNV7RdaxIuLgQM=
+        --substituters 'https://niv.cachix.org https://cache.nixos.org' \
+        --trusted-public-keys 'niv.cachix.org-1:X32PCg2e/zAm3/uD1ScqW2z/K0LtDyNV7RdaxIuLgQM= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY='
     # We need --rawfile for jq, available in jq 1.6, which is only available on ubuntu 20.04 and macos
     nix-env -iA nixpkgs.jq
     echo 'Installing dependencies - done'
