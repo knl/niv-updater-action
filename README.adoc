@@ -106,7 +106,7 @@ jobs:
   locally. Defaults to `false`.
 
 As the above list suggests, `niv-updater-action` is highly configurable.
-The following example exposes some of the nobs, many with their default values:
+The following example exposes some of the knobs, many with their default values:
 
 [source,yaml]
 ----
