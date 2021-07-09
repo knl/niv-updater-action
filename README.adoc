@@ -1,4 +1,4 @@
-= niv-updater: Automated dependency updates with niv 
+= niv-updater: Automated dependency updates with niv
 
 image:https://github.com/knl/niv-updater-action/workflows/CI/badge.svg[CI]
 image:https://img.shields.io/github/v/release/knl/niv-updater-action[GitHub release (latest by date)]
