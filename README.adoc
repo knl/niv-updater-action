@@ -101,7 +101,7 @@ jobs:
   https://github.com/knl/niv-updater-action/issues/26[Issue #26]. Defaults to
   `true`.
 * `debug_output`: (Optional, a boolean) If `true`, `set -x` will be turned on
-  for the updater script, outputing every step the action takes. This will show
+  for the updater script, outputting every step the action takes. This will show
   up in the action log, and could be useful for trying to reproduce issues
   locally. Defaults to `false`.
 
