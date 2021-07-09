@@ -59,7 +59,7 @@ jobs:
   this action. The action does not sanitize the branch name. For a description
   of what a valid branch name is, please consult:
   https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html.
-  Defaults to "update/".
+  Defaults to `update/`.
 * `keep_updating`: (Optional) If PR already exists, keep it updated with new
   changes. The branch will be force updated, as this process keeps a single
   commit on a branch. Defaults to `false` to maintain the old behaviour.
