@@ -38,7 +38,7 @@ setupPrerequisites() {
 
     export PATH="${PATH}:/nix/var/nix/profiles/per-user/runner/profile/bin:/nix/var/nix/profiles/default/bin"
 
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1091
     source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
 
     # we also need hub, and git, but they both come with ubuntu-latest with GitHub Actions
