@@ -29,7 +29,8 @@ setupPrerequisites() {
         # Workaround segfault: https://github.com/NixOS/nix/issues/2733
         sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
 
-        sh <(curl -sSL https://nixos.org/nix/install) --no-daemon
+        # pin to ensure future upgrades do not interfere with the subsequent steps
+        sh <(curl -sSL https://releases.nixos.org/nix/nix-2.3.16/install) --no-daemon
     fi
 
     echo 'Installing Nix - done'
