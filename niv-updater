@@ -540,6 +540,7 @@ createPullRequestsOnUpdate() {
 
 if [[ $INPUT_DEBUG_OUTPUT == 'true' ]]; then
     set -x
+    export HUB_VERBOSE=true
 fi
 
 checkCredentials
