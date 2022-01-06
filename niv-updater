@@ -129,17 +129,16 @@ formatIssueLinksPlain() {
 }
 
 # Like formatIssuesLinkPlain, this function turns any #123 a direct reference to the original repository.
-# Unlike formatIssuesLink, it will use a redirection service (DuckDuckGo), so that referenced PRs/Issues
+# Unlike formatIssuesLink, it will use a redirection service (togithub.com), so that referenced PRs/Issues
 # do not contain back references.
 # For more details, see https://github.com/knl/niv-updater-action/issues/26
-# NOTE: It has to be http://r.duckduckgo.com, https variant will not redirect
 formatIssueLinksNoBackreferences() {
     dep_owner="$1"
     dep_repo="$2"
     # The sequence e2 81 a0 is \u2060 - UNICODE WORD JOINER
     # We need it in order prevent GitHub from making a backreference due to
     # the commit message text.
-    sed "s~#\([0-9]\+\)~[$dep_owner/$dep_repo\xe2\x81\xa0#\1](http://r.duckduckgo.com/l/?uddg=https://github.com/$dep_owner/$dep_repo/issues/\1)~g"
+    sed "s~#\([0-9]\+\)~[$dep_owner/$dep_repo\xe2\x81\xa0#\1](https://togithub.com/$dep_owner/$dep_repo/issues/\1)~g"
 }
 
 # This function formats mentions in the generated changelog in such a way that
