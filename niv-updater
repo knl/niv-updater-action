@@ -370,7 +370,7 @@ createPullRequestsOnUpdate() {
                 -F ref="refs/heads/$branch_name" \
                 -F sha="$base" \
                 "/repos/$GITHUB_REPOSITORY/git/refs" >"$hub_api_out"; then
-	        error "could not create branch $branch_name for base $base, due to $(cat "$hub_api_out")"
+                error "could not create branch $branch_name for base $base, due to $(cat "$hub_api_out")"
             fi
 
             # upload the content
