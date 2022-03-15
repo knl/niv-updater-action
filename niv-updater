@@ -340,7 +340,8 @@ createPullRequestsOnUpdate() {
                 printf 'Branch: %s\n' "$niv_branch"
                 printf 'Commits: [%s/%s@%.8s...%.8s](https://github.com/%s/%s/compare/%s...%s)\n\n' "$dep_owner" "$dep_repo" "$revision" "$new_revision" "$dep_owner" "$dep_repo" "$revision" "$new_revision"
                 {
-                    hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true
+                    # In order for this to work, one has to use both paginate and per_page
+                    hub api --paginate "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}?per_page=100" || true
                 } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' \
                     | formatIssueLinks "$dep_owner" "$dep_repo" \
                     | formatMentions
