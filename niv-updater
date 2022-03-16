@@ -365,8 +365,8 @@ createPullRequestsOnUpdate() {
             printf '%s%s' "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}"
         } >"$commit_message"
 
-        if (( message_size > max_message_size )); then
-            < "$message" head -c $max_message_size | sed '$d' | sponge "$message"
+        if ((message_size > max_message_size)); then
+            head <"$message" -c $max_message_size | sed '$d' | sponge "$message"
             printf "%s\n" "$truncation_string" >>"$message"
         fi
         # print with a new line appended, as yaml swallows those
