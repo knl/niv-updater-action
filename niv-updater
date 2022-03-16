@@ -29,7 +29,8 @@ setupPrerequisites() {
         # Workaround segfault: https://github.com/NixOS/nix/issues/2733
         sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
 
-        sh <(curl -sSL https://nixos.org/nix/install) --no-daemon
+        # pin to ensure future upgrades do not interfere with the subsequent steps
+        sh <(curl -sSL https://releases.nixos.org/nix/nix-2.3.16/install) --no-daemon
     fi
 
     echo 'Installing Nix - done'
@@ -37,7 +38,7 @@ setupPrerequisites() {
 
     export PATH="${PATH}:/nix/var/nix/profiles/per-user/runner/profile/bin:/nix/var/nix/profiles/default/bin"
 
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1091
     source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
 
     # we also need hub, and git, but they both come with ubuntu-latest with GitHub Actions
@@ -48,7 +49,8 @@ setupPrerequisites() {
         --substituters 'https://niv.cachix.org https://cache.nixos.org' \
         --trusted-public-keys 'niv.cachix.org-1:X32PCg2e/zAm3/uD1ScqW2z/K0LtDyNV7RdaxIuLgQM= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY='
     # We need --rawfile for jq, available in jq 1.6, which is only available on ubuntu 20.04 and macos
-    nix-env -iA nixpkgs.jq
+    # We need moreutils because of the sponge utility (to simplify the code)
+    nix-env -iA nixpkgs.jq nixpkgs.moreutils
     echo 'Installing dependencies - done'
 }
 
@@ -128,17 +130,16 @@ formatIssueLinksPlain() {
 }
 
 # Like formatIssuesLinkPlain, this function turns any #123 a direct reference to the original repository.
-# Unlike formatIssuesLink, it will use a redirection service (DuckDuckGo), so that referenced PRs/Issues
+# Unlike formatIssuesLink, it will use a redirection service (togithub.com), so that referenced PRs/Issues
 # do not contain back references.
 # For more details, see https://github.com/knl/niv-updater-action/issues/26
-# NOTE: It has to be http://r.duckduckgo.com, https variant will not redirect
 formatIssueLinksNoBackreferences() {
     dep_owner="$1"
     dep_repo="$2"
     # The sequence e2 81 a0 is \u2060 - UNICODE WORD JOINER
     # We need it in order prevent GitHub from making a backreference due to
     # the commit message text.
-    sed "s~#\([0-9]\+\)~[$dep_owner/$dep_repo\xe2\x81\xa0#\1](http://r.duckduckgo.com/l/?uddg=https://github.com/$dep_owner/$dep_repo/issues/\1)~g"
+    sed "s~#\([0-9]\+\)~[$dep_owner/$dep_repo\xe2\x81\xa0#\1](https://togithub.com/$dep_owner/$dep_repo/issues/\1)~g"
 }
 
 # This function formats mentions in the generated changelog in such a way that
@@ -340,22 +341,36 @@ createPullRequestsOnUpdate() {
                 printf 'Branch: %s\n' "$niv_branch"
                 printf 'Commits: [%s/%s@%.8s...%.8s](https://github.com/%s/%s/compare/%s...%s)\n\n' "$dep_owner" "$dep_repo" "$revision" "$new_revision" "$dep_owner" "$dep_repo" "$revision" "$new_revision"
                 {
-                    hub api "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}" || true
+                    # In order for this to work, one has to use both paginate and per_page
+                    hub api --paginate "/repos/$dep_owner/$dep_repo/compare/${revision}...${new_revision}?per_page=100" || true
                 } | jq -r '.commits[] '"$merges_filter"' | "* [`\(.sha[0:8])`](\(.html_url)) \(.commit.message | split("\n") | first)"' \
                     | formatIssueLinks "$dep_owner" "$dep_repo" \
                     | formatMentions
             } >>"$message"
         fi
 
-        # print with a new line appended, as yaml swallows those
-        printf '%s%s' "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}" >>"$message"
+        message_size=$(wc -c <"$message")
+        truncation_string="* ... _the rest of the list is truncated due to the maximum length of the PR message on GitHub. Please take a look at the commit message._"
+        max_message_size=$((65536 - ${#INPUT_MESSAGE_SUFFIX} - 1 - ${#truncation_string} - 1))
 
+        # This is now split in two different, interleaved actions:
+        # - generating the commit message of any size
+        # - generating the PR description with max size of 64k
         commit_message=$(mktemp)
         {
             cat "$title"
             printf '\n\n'
             cat "$message"
+            # print with a new line appended, as yaml swallows those
+            printf '%s%s' "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}"
         } >"$commit_message"
+
+        if ((message_size > max_message_size)); then
+            head <"$message" -c $max_message_size | sed '$d' | sponge "$message"
+            printf "%s\n" "$truncation_string" >>"$message"
+        fi
+        # print with a new line appended, as yaml swallows those
+        printf '%s%s' "$INPUT_MESSAGE_SUFFIX" "${INPUT_MESSAGE_SUFFIX:+$'\n'}" >>"$message"
 
         new_content=$(mktemp)
         base64 "$wdir/$SOURCES_JSON" >>"$new_content"
@@ -364,11 +379,12 @@ createPullRequestsOnUpdate() {
         if [[ $branch_exists == 'no' ]]; then
             # create the branch
             echo "Creating branch '$branch_name' for the update of '$dep'"
+            hub_api_out=$(mktemp)
             if ! hub api \
                 -F ref="refs/heads/$branch_name" \
                 -F sha="$base" \
-                "/repos/$GITHUB_REPOSITORY/git/refs" >/dev/null; then
-                error "could not create branch $branch_name"
+                "/repos/$GITHUB_REPOSITORY/git/refs" >"$hub_api_out"; then
+                error "could not create branch $branch_name for base $base, due to $(cat "$hub_api_out")"
             fi
 
             # upload the content
@@ -539,6 +555,7 @@ createPullRequestsOnUpdate() {
 
 if [[ $INPUT_DEBUG_OUTPUT == 'true' ]]; then
     set -x
+    export HUB_VERBOSE=true
 fi
 
 checkCredentials
