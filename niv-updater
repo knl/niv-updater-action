@@ -351,7 +351,7 @@ createPullRequestsOnUpdate() {
 
         message_size=$(wc -c <"$message")
         truncation_string="* ... _the rest of the list is truncated due to the maximum length of the PR message on GitHub. Please take a look at the commit message._"
-        max_message_size=$((65536 - $#INPUT_MESSAGE_SUFFIX - 1 - $#truncation_string - 1))
+        max_message_size=$((65536 - ${#INPUT_MESSAGE_SUFFIX} - 1 - ${#truncation_string} - 1))
 
         # This is now split in two different, interleaved actions:
         # - generating the commit message of any size
