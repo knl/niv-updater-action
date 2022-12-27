@@ -30,7 +30,7 @@ setupPrerequisites() {
         sudo sh -c 'echo "http2 = false" >> /etc/nix/nix.conf'
 
         # pin to ensure future upgrades do not interfere with the subsequent steps
-        sh <(curl -sSL https://releases.nixos.org/nix/nix-2.3.16/install) --no-daemon
+        sh <(curl -sSL https://releases.nixos.org/nix/nix-2.11.1/install) --no-daemon
     fi
 
     echo 'Installing Nix - done'
