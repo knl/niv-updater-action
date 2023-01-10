@@ -165,3 +165,35 @@ Actions workflow YAML file.
 
 * `GITHUB_TOKEN` - (Required) The GitHub API token used to create pull requests
   and get content from all repositories tracked by `niv`.
+
+== Self hosted runner
+
+Self-hosted runners are running with dynamic users so nix profile is not accessible, as well as nix-env.
+As this action relies on nix-env to install niv, the default configuration will not work. Thus, to use niv from
+available nixpkgs, set `niv_version` to `*from-nixpkgs*`. It will install `niv` using `nixpkgs` with nix-shell
+instead of nix-env.
+
+To avoid using `sudo` (also unavailable on self-hosted runners), the input `skip_ssh_repos` should be set to `true`.
+
+Example:
+
+[source,yaml]
+----
+name: Automated niv-managed dependency updates
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # run this every day at 4:00am
+    - cron:  '0 4 * * *'
+jobs:
+  niv-updater:
+    name: 'Create PRs for niv-managed dependencies'
+    runs-on: ubuntu-latest
+    steps:
+      # notice there is no checkout step
+      - name: niv-updater-action
+        uses: knl/niv-updater-action@v10
+	with:
+          niv_version: 'nixpkgs'
+	  skip_ssh_repos: true
+----
