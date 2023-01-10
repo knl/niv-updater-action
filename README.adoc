@@ -169,7 +169,7 @@ Actions workflow YAML file.
 == Self hosted runner
 
 Self-hosted runners are running with dynamic users so nix profile is not accessible, as well as nix-env.
-As this action relies on nix-env to install niv,the default configuration will not work. Thus, to use niv from
+As this action relies on nix-env to install niv, the default configuration will not work. Thus, to use niv from
 available nixpkgs, set `niv_version` to `*from-nixpkgs*`. It will install `niv` using `nixpkgs` with nix-shell
 instead of nix-env.
 
