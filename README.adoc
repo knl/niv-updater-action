@@ -54,7 +54,8 @@ jobs:
   `nix/sources.json`.
 * `niv_version`: (Optional) The niv version to be used. Defaults to `master`,
   meaning `niv-updater-action` will take the latest niv for each run. You may want
-  to fix a particular version and avoid future breaks to your workflow.
+  to fix a particular version and avoid future breaks to your workflow. If you're
+  using a self-hosted runner, set this to `*from-nixpkgs*`.
 * `branch_prefix`: (Optional) The prefix used for update branches, created by
   this action. The action does not sanitize the branch name. For a description
   of what a valid branch name is, please consult:
@@ -168,12 +169,14 @@ Actions workflow YAML file.
 
 == Self hosted runner
 
-Self-hosted runners are running with dynamic users so nix profile is not accessible, as well as nix-env.
-As this action relies on nix-env to install niv, the default configuration will not work. Thus, to use niv from
-available nixpkgs, set `niv_version` to `*from-nixpkgs*`. It will install `niv` using `nixpkgs` with nix-shell
-instead of nix-env.
+Self-hosted runners are running with dynamic users so nix profile is not
+accessible, as well as nix-env. As this action relies on nix-env to install
+niv, the default configuration will not work. Thus, to use niv from available
+nixpkgs, set `niv_version` to `pass:[*from-nixpkgs*]`. It will install `niv`
+using `nixpkgs` with nix-shell instead of nix-env.
 
-To avoid using `sudo` (also unavailable on self-hosted runners), the input `skip_ssh_repos` should be set to `true`.
+To avoid using `sudo` (also unavailable on self-hosted runners), the input
+`pass:[skip_ssh_repos]` should be set to `true`.
 
 Example:
 
@@ -188,12 +191,12 @@ on:
 jobs:
   niv-updater:
     name: 'Create PRs for niv-managed dependencies'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       # notice there is no checkout step
       - name: niv-updater-action
         uses: knl/niv-updater-action@v10
-	with:
-          niv_version: 'nixpkgs'
-	  skip_ssh_repos: true
+        with:
+          niv_version: '*from-nixpkgs*'
+          skip_ssh_repos: true
 ----
