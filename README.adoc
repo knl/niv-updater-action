@@ -168,9 +168,12 @@ Actions workflow YAML file.
 
 == Self hosted runner
 
-To run this action with a self hosted runner you will need the input `niv_version` declared 
-with `nixpkgs`. It will install `niv` using `nixpkgs` with nix-shell instead of nix-env.
-To avoid using `sudo`, the input `skip_ssh_repos` should be set to `true`.
+Self-hosted runners are running with dynamic users so nix profile is not accessible, as well as nix-env.
+As this action relies on nix-env to install niv,the default configuration will not work. Thus, to use niv from
+available nixpkgs, set `niv_version` to `*from-nixpkgs*`. It will install `niv` using `nixpkgs` with nix-shell
+instead of nix-env.
+
+To avoid using `sudo` (also unavailable on self-hosted runners), the input `skip_ssh_repos` should be set to `true`.
 
 Example:
 
