@@ -163,7 +163,7 @@ formatIssueLinks() {
 createPullRequestsOnUpdate() {
     echo 'Checking for updates'
     if [[ -z $INPUT_PULL_REQUEST_BASE ]]; then
-        INPUT_PULL_REQUEST_BASE="$GITHUB_REF"
+        INPUT_PULL_REQUEST_BASE="${GITHUB_REF#refs/heads/}"
         base="$GITHUB_SHA"
     else
         # get the SHA of the current base, so that it remains fixed during the run
