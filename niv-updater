@@ -42,7 +42,7 @@ setupPrerequisites() {
     test -f "${HOME}/.nix-profile/etc/profile.d/nix.sh" && source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
 
     PACKAGES=(jq moreutils curl)
-    if [[ $INPUT_NIV_VERSION == 'nixpkgs' ]]; then
+    if [[ $INPUT_NIV_VERSION == "*from-nixpkgs*" ]]; then
         PACKAGES+=(niv)
     else
         # we also need hub, and git, but they both come with ubuntu-latest with GitHub Actions
