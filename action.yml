@@ -2,7 +2,7 @@ name: 'niv Updater Action'
 description: 'A GitHub action that detects updates to dependencies tracked by niv and creates pull requests to keep them up to date.'
 author: 'knl'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'main.js'
 inputs:
   pull_request_base:
