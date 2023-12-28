@@ -32,6 +32,7 @@ jobs:
 
           echo "/nix/var/nix/profiles/per-user/runner/profile/bin" >> $GITHUB_PATH
           echo "/nix/var/nix/profiles/default/bin" >> $GITHUB_PATH
+          echo "${HOME}/.nix-profile/bin" >> $GITHUB_PATH
 
           source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
           # Install dependencies
