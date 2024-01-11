@@ -1,6 +1,6 @@
 = niv-updater: Automated dependency updates with niv
 
-image:https://github.com/knl/niv-updater-action/workflows/CI/badge.svg[CI]
+image:https://github.com/knl/niv-updater-action/actions/workflows/main.yml/badge.svg[CI]
 image:https://img.shields.io/github/v/release/knl/niv-updater-action[GitHub release (latest by date)]
 
 This action will open a pull request to `master` branch (or otherwise specified
