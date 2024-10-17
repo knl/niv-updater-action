@@ -116,7 +116,7 @@ setupPrerequisites() {
     [[ $(type -P "hub") ]] || PACKAGES+=(hub)
 
     # shellcheck disable=SC2016
-    PATH="${PATH}:$(nix-shell -I "nixpkgs=https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-23.11.tar.gz" -p "${PACKAGES[@]}" --command 'echo $PATH')"
+    PATH="${PATH}:$(nix-shell -I "nixpkgs=https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-24.05.tar.gz" -p "${PACKAGES[@]}" --command 'echo $PATH')"
 
     echo 'Installing dependencies - done'
 }
